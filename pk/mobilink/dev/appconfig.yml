@@ -1,0 +1,9 @@
+server:
+  port: 50304
+  queue: mobilink
+
+
+consumer:
+  uri: amqp://linkit:dg-U_oHhy7-@52.66.23.201:5672
+  queue_prefetch_count: 4
+  reconnect_delay: 10
