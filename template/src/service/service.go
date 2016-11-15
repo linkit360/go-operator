@@ -4,22 +4,22 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
 	"github.com/vostrok/db"
-	m "github.com/vostrok/metrics"
-	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
-	"github.com/vostrok/operator/pk/mobilink/src/config"
+	"github.com/vostrok/operator/pk/mobilink"
+	"github.com/vostrok/operator/template/src/config"
 	"github.com/vostrok/rabbit"
 )
 
 var svc Service
 
+type Operator interface {
+}
+
 type Service struct {
-	api       *mobilink_api.Mobilink
 	consumer  *rabbit.Consumer
 	publisher rabbit.AMQPService
 	records   <-chan amqp_driver.Delivery
@@ -35,28 +35,8 @@ type Config struct {
 	publisher rabbit.RBMQConfig
 }
 
-type Metrics struct {
-	Dropped m.Gauge
-	Empty   m.Gauge
-}
-
-func initMetrics() Metrics {
-	m := Metrics{
-		Dropped: m.NewGauge("", "", "dropped", "mobilink queue dropped"),
-		Empty:   m.NewGauge("", "", "empty", "mobilink queue empty"),
-	}
-	go func() {
-		for range time.Tick(time.Minute) {
-			m.Dropped.Update()
-			m.Empty.Update()
-		}
-	}()
-	return m
-}
-
 func InitService(
 	serverConfig config.ServerConfig,
-	mbConf mobilink_api.Config,
 	dbConf db.DataBaseConfig,
 	queuesConfig config.QueueConfig,
 	consumerConfig rabbit.ConsumerConfig,
@@ -74,8 +54,6 @@ func InitService(
 	svc.db = db.Init(dbConf)
 
 	svc.m = initMetrics()
-
-	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.publisher)
 
 	svc.publisher = rabbit.NewPublisher(publisherConfig, rabbit.InitPublisherMetrics())
 
@@ -101,7 +79,7 @@ func InitService(
 	)
 }
 
-func (svc *Service) publishResponse(eventName string, data interface{}) error {
+func publish(eventName string, data interface{}) error {
 	event := rabbit.EventNotify{
 		EventName: eventName,
 		EventData: data,

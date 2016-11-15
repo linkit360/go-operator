@@ -5,10 +5,24 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/streadway/amqp"
 
 	rec "github.com/vostrok/mt_manager/src/service/instance"
 )
+
+type Metrics struct {
+	Dropped metrics.Counter
+	Empty   metrics.Counter
+}
+
+func initMetrics() Metrics {
+	return Metrics{
+		Dropped: expvar.NewCounter("dropped"),
+		Empty:   expvar.NewCounter("empty"),
+	}
+}
 
 type EventNotifyUserActions struct {
 	EventName string     `json:"event_name,omitempty"`
@@ -23,30 +37,21 @@ func process(deliveries <-chan amqp.Delivery) {
 
 		var e EventNotifyUserActions
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
-			svc.m.Dropped.Inc()
+			svc.m.Dropped.Add(1)
 
 			log.WithFields(log.Fields{
 				"error":       err.Error(),
 				"msg":         "dropped",
 				"contentSent": string(msg.Body),
-			}).Error("consume from " + svc.conf.queues.In)
+			}).Error("consume from " + svc.conf.server)
 			msg.Ack(false)
 			continue
 		}
 
-		switch {
-		case e.EventName == "send_sms":
+		if e.EventName == "charge" {
 			t := e.EventData
-			_ = svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
-			msg.Ack(false)
-
-		case e.EventName == "charge":
-			t := e.EventData
-
+			query := ""
 			var err error
-
-			<-svc.api.ThrottleMT
-			svc.api.Tarifficate(&t)
 
 			// types of cann't process
 			// it isn't types when operator or our error occurs
@@ -55,6 +60,7 @@ func process(deliveries <-chan amqp.Delivery) {
 
 				log.WithFields(log.Fields{
 					"rec":   fmt.Sprintf("%#v", t),
+					"query": query,
 					"msg":   "requeue",
 					"error": err.Error(),
 				}).Error("can't process")
@@ -64,8 +70,8 @@ func process(deliveries <-chan amqp.Delivery) {
 			log.WithFields(log.Fields{
 				"rec": t,
 			}).Info("processed successfully")
-		default:
-			svc.m.Dropped.Inc()
+		} else {
+			svc.m.Dropped.Add(1)
 			msg.Ack(false)
 			log.WithFields(log.Fields{
 				"eventName": e.EventName,

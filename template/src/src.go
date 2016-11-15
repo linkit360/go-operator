@@ -8,20 +8,12 @@ import (
 	"github.com/gin-gonic/contrib/expvar"
 	"github.com/gin-gonic/gin"
 
-	"github.com/vostrok/operator/pk/mobilink/src/config"
-	"github.com/vostrok/operator/pk/mobilink/src/service"
+	"github.com/vostrok/operator/pk/mobilink"
 )
 
 func RunServer() {
 	appConfig := config.LoadConfig()
-	service.InitService(
-		appConfig.Server,
-		appConfig.Mobilink,
-		appConfig.DbConf,
-		appConfig.Queues,
-		appConfig.Consumer,
-		appConfig.Publisher,
-	)
+	service.InitService(appConfig.Server, appConfig.DbConf, appConfig.Consumer)
 
 	nuCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nuCPU)

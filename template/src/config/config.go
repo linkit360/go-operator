@@ -8,7 +8,6 @@ import (
 	"github.com/jinzhu/configor"
 
 	"github.com/vostrok/db"
-	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/rabbit"
 )
 
@@ -23,7 +22,6 @@ type QueueConfig struct {
 }
 type AppConfig struct {
 	Server    ServerConfig          `yaml:"server"`
-	Mobilink  mobilink_api.Config   `yaml:"mobilink"`
 	DbConf    db.DataBaseConfig     `yaml:"db"`
 	Consumer  rabbit.ConsumerConfig `yaml:"consumer"`
 	Publisher rabbit.RBMQConfig     `yaml:"publisher"`
