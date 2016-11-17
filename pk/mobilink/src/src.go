@@ -5,9 +5,9 @@ import (
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/contrib/expvar"
 	"github.com/gin-gonic/gin"
 
+	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/operator/pk/mobilink/src/config"
 	"github.com/vostrok/operator/pk/mobilink/src/service"
 )
@@ -28,9 +28,8 @@ func RunServer() {
 	log.WithField("CPUCount", nuCPU)
 
 	r := gin.New()
-
-	rg := r.Group("/debug")
-	rg.GET("/vars", expvar.Handler())
+	rgMobilink := r.Group("/mobilink_handler")
+	rgMobilink.POST("", mobilink_api.MobilinkHandler)
 
 	r.Run(":" + appConfig.Server.Port)
 

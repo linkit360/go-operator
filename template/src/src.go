@@ -8,7 +8,8 @@ import (
 	"github.com/gin-gonic/contrib/expvar"
 	"github.com/gin-gonic/gin"
 
-	"github.com/vostrok/operator/pk/mobilink"
+	"github.com/vostrok/operator/pk/mobilink/"
+	"github.com/vostrok/operator/pk/mobilink/src/api"
 )
 
 func RunServer() {
@@ -21,8 +22,8 @@ func RunServer() {
 
 	r := gin.New()
 
-	rg := r.Group("/debug")
-	rg.GET("/vars", expvar.Handler())
+	rgMobilink := r.Group("/mobilink_handler")
+	rgMobilink.POST("", mobilink.MobilinkHandler)
 
 	r.Run(":" + appConfig.Server.Port)
 

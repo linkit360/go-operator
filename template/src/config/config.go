@@ -24,7 +24,7 @@ type AppConfig struct {
 	Server    ServerConfig          `yaml:"server"`
 	DbConf    db.DataBaseConfig     `yaml:"db"`
 	Consumer  rabbit.ConsumerConfig `yaml:"consumer"`
-	Publisher rabbit.RBMQConfig     `yaml:"publisher"`
+	Publisher rabbit.NotifierConfig `yaml:"publisher"`
 	Queues    QueueConfig           `yaml:"-"`
 }
 

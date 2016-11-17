@@ -26,7 +26,7 @@ type AppConfig struct {
 	Mobilink  mobilink_api.Config   `yaml:"mobilink"`
 	DbConf    db.DataBaseConfig     `yaml:"db"`
 	Consumer  rabbit.ConsumerConfig `yaml:"consumer"`
-	Publisher rabbit.RBMQConfig     `yaml:"publisher"`
+	Publisher rabbit.NotifierConfig `yaml:"publisher"`
 	Queues    QueueConfig           `yaml:"-"`
 }
 
@@ -47,6 +47,11 @@ func LoadConfig() AppConfig {
 
 	appConfig.Queues.In = appConfig.Server.OperatorName + "_requests"
 	appConfig.Queues.Out = appConfig.Server.OperatorName + "_responses"
+
+	appConfig.Mobilink.TransactionLog.ResponseLogPath =
+		envString("MOBILINK_RESPONSE_LOG", appConfig.Mobilink.TransactionLog.ResponseLogPath)
+	appConfig.Mobilink.TransactionLog.RequestLogPath =
+		envString("MOBILINK_REQUEST_LOG", appConfig.Mobilink.TransactionLog.RequestLogPath)
 
 	log.WithField("config", appConfig).Info("Config loaded")
 	return appConfig

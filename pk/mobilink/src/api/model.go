@@ -22,7 +22,7 @@ type Mobilink struct {
 	smpp        *smpp_client.Transmitter
 	responseLog *log.Logger
 	requestLog  *log.Logger
-	publisher   rabbit.AMQPService
+	notifier    *rabbit.Notifier
 }
 type Config struct {
 	Rps            int                  `default:"10" yaml:"rps"`
@@ -113,7 +113,7 @@ func My(msisdn string) bool {
 func Init(
 	mobilinkRps int,
 	mobilinkConf Config,
-	publisher rabbit.AMQPService,
+	notifier *rabbit.Notifier,
 ) *Mobilink {
 	initMetrics()
 	mb := &Mobilink{
@@ -122,7 +122,7 @@ func Init(
 	}
 	log.Info("mb metrics init done")
 
-	mb.publisher = publisher
+	mb.notifier = notifier
 	mb.ThrottleMT = time.Tick(time.Second / time.Duration(mobilinkConf.Rps))
 	mb.requestLog = getLogger(mobilinkConf.TransactionLog.RequestLogPath)
 	log.Info("request logger init done")

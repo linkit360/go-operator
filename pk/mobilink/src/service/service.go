@@ -19,20 +19,20 @@ import (
 var svc Service
 
 type Service struct {
-	api       *mobilink_api.Mobilink
-	consumer  *rabbit.Consumer
-	publisher rabbit.AMQPService
-	records   <-chan amqp_driver.Delivery
-	db        *sql.DB
-	m         Metrics
-	conf      Config
+	api      *mobilink_api.Mobilink
+	consumer *rabbit.Consumer
+	notifier *rabbit.Notifier
+	records  <-chan amqp_driver.Delivery
+	db       *sql.DB
+	m        Metrics
+	conf     Config
 }
 type Config struct {
-	server    config.ServerConfig
-	db        db.DataBaseConfig
-	queues    config.QueueConfig
-	consumer  rabbit.ConsumerConfig
-	publisher rabbit.RBMQConfig
+	server   config.ServerConfig
+	db       db.DataBaseConfig
+	queues   config.QueueConfig
+	consumer rabbit.ConsumerConfig
+	notifier rabbit.NotifierConfig
 }
 
 type Metrics struct {
@@ -60,24 +60,24 @@ func InitService(
 	dbConf db.DataBaseConfig,
 	queuesConfig config.QueueConfig,
 	consumerConfig rabbit.ConsumerConfig,
-	publisherConfig rabbit.RBMQConfig,
+	notifierConfig rabbit.NotifierConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = Config{
-		server:    serverConfig,
-		db:        dbConf,
-		queues:    queuesConfig,
-		consumer:  consumerConfig,
-		publisher: publisherConfig,
+		server:   serverConfig,
+		db:       dbConf,
+		queues:   queuesConfig,
+		consumer: consumerConfig,
+		notifier: notifierConfig,
 	}
 
 	svc.db = db.Init(dbConf)
 
 	svc.m = initMetrics()
 
-	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.publisher)
+	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
 
-	svc.publisher = rabbit.NewPublisher(publisherConfig, rabbit.InitPublisherMetrics())
+	svc.notifier = rabbit.NewNotifier(notifierConfig)
 
 	// process consumer
 	svc.consumer = rabbit.NewConsumer(consumerConfig)
@@ -110,6 +110,6 @@ func (svc *Service) publishResponse(eventName string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.publisher.Publish(rabbit.AMQPMessage{svc.conf.queues.Out, body})
+	svc.notifier.Publish(rabbit.AMQPMessage{svc.conf.queues.Out, body})
 	return nil
 }

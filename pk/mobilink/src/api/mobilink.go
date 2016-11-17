@@ -352,6 +352,6 @@ func (mb *Mobilink) publishTransactionLog(data interface{}) error {
 		Errors.Inc()
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	mb.publisher.Publish(rabbit.AMQPMessage{mb.conf.TransactionLog.Queue, body})
+	mb.notifier.Publish(rabbit.AMQPMessage{mb.conf.TransactionLog.Queue, body})
 	return nil
 }

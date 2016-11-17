@@ -32,7 +32,7 @@ type Config struct {
 	db        db.DataBaseConfig
 	queues    config.QueueConfig
 	consumer  rabbit.ConsumerConfig
-	publisher rabbit.RBMQConfig
+	publisher rabbit.NotifierConfig
 }
 
 func InitService(
@@ -40,7 +40,7 @@ func InitService(
 	dbConf db.DataBaseConfig,
 	queuesConfig config.QueueConfig,
 	consumerConfig rabbit.ConsumerConfig,
-	publisherConfig rabbit.RBMQConfig,
+	publisherConfig rabbit.NotifierConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = Config{
@@ -55,7 +55,7 @@ func InitService(
 
 	svc.m = initMetrics()
 
-	svc.publisher = rabbit.NewPublisher(publisherConfig, rabbit.InitPublisherMetrics())
+	svc.publisher = rabbit.NewNotifier(publisherConfig, rabbit.initPublisherMetrics())
 
 	// process consumer
 	svc.consumer = rabbit.NewConsumer(consumerConfig)
