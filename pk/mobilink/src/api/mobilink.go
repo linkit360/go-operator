@@ -7,6 +7,7 @@
 package mobilink
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -19,10 +20,9 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 	"github.com/gin-gonic/gin"
 
-	"encoding/json"
-	rec "github.com/vostrok/mt_manager/src/service/instance"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	"github.com/vostrok/rabbit"
+	"github.com/vostrok/utils/amqp"
+	rec "github.com/vostrok/utils/rec"
 )
 
 func (mb *Mobilink) Tarifficate(record *rec.Record) {

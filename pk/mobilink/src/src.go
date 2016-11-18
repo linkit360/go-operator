@@ -10,14 +10,15 @@ import (
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/operator/pk/mobilink/src/config"
 	"github.com/vostrok/operator/pk/mobilink/src/service"
+	m "github.com/vostrok/utils/metrics"
 )
 
 func RunServer() {
 	appConfig := config.LoadConfig()
+	m.Init(appConfig.Name)
 	service.InitService(
 		appConfig.Server,
 		appConfig.Mobilink,
-		appConfig.DbConf,
 		appConfig.Queues,
 		appConfig.Consumer,
 		appConfig.Publisher,

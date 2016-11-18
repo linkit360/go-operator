@@ -1,5 +1,7 @@
+name: mumbai_mobilink
+
 server:
-  port: 50304
+  port: 50306
   threads_count: 1
   operator_name: mobilink
 

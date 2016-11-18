@@ -9,7 +9,7 @@ import (
 	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/streadway/amqp"
 
-	rec "github.com/vostrok/mt_manager/src/service/instance"
+	rec "github.com/vostrok/utils/rec"
 )
 
 type Metrics struct {

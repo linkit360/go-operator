@@ -8,10 +8,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
-	"github.com/vostrok/db"
 	"github.com/vostrok/operator/pk/mobilink"
 	"github.com/vostrok/operator/template/src/config"
-	"github.com/vostrok/rabbit"
+	"github.com/vostrok/utils/amqp"
+	"github.com/vostrok/utils/db"
 )
 
 var svc Service

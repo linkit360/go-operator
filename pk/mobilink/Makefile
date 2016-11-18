@@ -10,6 +10,6 @@ rm:
 
 build:
 	export GOOS=linux; export GOARCH=amd64; \
-  go build -ldflags "-s -w" -o bin/mobilink-linux-amd64 ; cp bin/mobilink-linux-amd64 ~/linkit
+  go build -ldflags "-s -w" -o bin/mobilink-linux-amd64 ; cp bin/mobilink-linux-amd64 ~/linkit; cp dev/mobilink.yml ~/linkit/;
 
 

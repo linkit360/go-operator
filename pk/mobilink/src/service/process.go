@@ -7,7 +7,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	rec "github.com/vostrok/mt_manager/src/service/instance"
+	rec "github.com/vostrok/utils/rec"
 )
 
 type EventNotifyUserActions struct {
@@ -15,7 +15,7 @@ type EventNotifyUserActions struct {
 	EventData rec.Record `json:"event_data,omitempty"`
 }
 
-func process(deliveries <-chan amqp.Delivery) {
+func processTarifficate(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		log.WithFields(log.Fields{
 			"body": string(msg.Body),

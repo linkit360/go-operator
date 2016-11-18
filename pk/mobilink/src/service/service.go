@@ -4,16 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
-	"github.com/vostrok/db"
-	m "github.com/vostrok/metrics"
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/operator/pk/mobilink/src/config"
-	"github.com/vostrok/rabbit"
+	"github.com/vostrok/utils/amqp"
+	m "github.com/vostrok/utils/metrics"
 )
 
 var svc Service
@@ -29,7 +27,6 @@ type Service struct {
 }
 type Config struct {
 	server   config.ServerConfig
-	db       db.DataBaseConfig
 	queues   config.QueueConfig
 	consumer rabbit.ConsumerConfig
 	notifier rabbit.NotifierConfig
@@ -45,19 +42,12 @@ func initMetrics() Metrics {
 		Dropped: m.NewGauge("", "", "dropped", "mobilink queue dropped"),
 		Empty:   m.NewGauge("", "", "empty", "mobilink queue empty"),
 	}
-	go func() {
-		for range time.Tick(time.Minute) {
-			m.Dropped.Update()
-			m.Empty.Update()
-		}
-	}()
 	return m
 }
 
 func InitService(
 	serverConfig config.ServerConfig,
 	mbConf mobilink_api.Config,
-	dbConf db.DataBaseConfig,
 	queuesConfig config.QueueConfig,
 	consumerConfig rabbit.ConsumerConfig,
 	notifierConfig rabbit.NotifierConfig,
@@ -65,13 +55,10 @@ func InitService(
 	log.SetLevel(log.DebugLevel)
 	svc.conf = Config{
 		server:   serverConfig,
-		db:       dbConf,
 		queues:   queuesConfig,
 		consumer: consumerConfig,
 		notifier: notifierConfig,
 	}
-
-	svc.db = db.Init(dbConf)
 
 	svc.m = initMetrics()
 
@@ -94,7 +81,7 @@ func InitService(
 	}
 	go svc.consumer.Handle(
 		svc.records,
-		process,
+		processTarifficate,
 		serverConfig.ThreadsCount,
 		queuesConfig.In,
 		queuesConfig.In,

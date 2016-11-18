@@ -3,13 +3,13 @@ package config
 import (
 	"flag"
 	"os"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	"github.com/vostrok/db"
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
-	"github.com/vostrok/rabbit"
+	"github.com/vostrok/utils/amqp"
 )
 
 type ServerConfig struct {
@@ -22,9 +22,9 @@ type QueueConfig struct {
 	Out string `yaml:"-"`
 }
 type AppConfig struct {
+	Name      string                `yaml:"name"`
 	Server    ServerConfig          `yaml:"server"`
 	Mobilink  mobilink_api.Config   `yaml:"mobilink"`
-	DbConf    db.DataBaseConfig     `yaml:"db"`
 	Consumer  rabbit.ConsumerConfig `yaml:"consumer"`
 	Publisher rabbit.NotifierConfig `yaml:"publisher"`
 	Queues    QueueConfig           `yaml:"-"`
@@ -39,6 +39,13 @@ func LoadConfig() AppConfig {
 		if err := configor.Load(&appConfig, *cfg); err != nil {
 			log.WithField("config", err.Error()).Fatal("config load error")
 		}
+	}
+
+	if appConfig.Name == "" {
+		log.Fatal("app name must be defiled as <host>_<name>")
+	}
+	if strings.Contains(appConfig.Name, "-") {
+		log.Fatal("app name must be without '-' : it's not a valid metric name")
 	}
 
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)

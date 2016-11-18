@@ -9,8 +9,8 @@ import (
 	smpp_client "github.com/fiorix/go-smpp/smpp"
 	"github.com/prometheus/client_golang/prometheus"
 
-	m "github.com/vostrok/metrics"
-	"github.com/vostrok/rabbit"
+	"github.com/vostrok/utils/amqp"
+	m "github.com/vostrok/utils/metrics"
 )
 
 type Mobilink struct {
@@ -88,19 +88,6 @@ func initMetrics() {
 			SinceSuccessPaid.Inc()
 		}
 	}()
-
-	go func() {
-		for range time.Tick(time.Minute) {
-			SMSOverall.Update()
-			SMSError.Update()
-			BalanceCheckOverall.Update()
-			BalanceCheckErrors.Update()
-			TarificateOverall.Update()
-			TarificateErrors.Update()
-			Errors.Update()
-		}
-	}()
-
 }
 
 // prefix from table
