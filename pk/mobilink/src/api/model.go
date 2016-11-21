@@ -22,7 +22,7 @@ type Mobilink struct {
 	smpp        *smpp_client.Transmitter
 	responseLog *log.Logger
 	requestLog  *log.Logger
-	notifier    *rabbit.Notifier
+	notifier    *amqp.Notifier
 }
 type Config struct {
 	Rps            int                  `default:"10" yaml:"rps"`
@@ -100,7 +100,7 @@ func My(msisdn string) bool {
 func Init(
 	mobilinkRps int,
 	mobilinkConf Config,
-	notifier *rabbit.Notifier,
+	notifier *amqp.Notifier,
 ) *Mobilink {
 	initMetrics()
 	mb := &Mobilink{

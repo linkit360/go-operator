@@ -10,6 +10,7 @@ import (
 
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/utils/amqp"
+	"github.com/vostrok/utils/config"
 )
 
 type ServerConfig struct {
@@ -17,17 +18,13 @@ type ServerConfig struct {
 	OperatorName string `yaml:"operator_name"`
 	ThreadsCount int    `default:"1" yaml:"threads_count"`
 }
-type QueueConfig struct {
-	In  string `yaml:"-"`
-	Out string `yaml:"-"`
-}
 type AppConfig struct {
-	Name      string                `yaml:"name"`
-	Server    ServerConfig          `yaml:"server"`
-	Mobilink  mobilink_api.Config   `yaml:"mobilink"`
-	Consumer  rabbit.ConsumerConfig `yaml:"consumer"`
-	Publisher rabbit.NotifierConfig `yaml:"publisher"`
-	Queues    QueueConfig           `yaml:"-"`
+	Name      string                     `yaml:"name"`
+	Server    ServerConfig               `yaml:"server"`
+	Mobilink  mobilink_api.Config        `yaml:"mobilink"`
+	Consumer  amqp.ConsumerConfig        `yaml:"consumer"`
+	Publisher amqp.NotifierConfig        `yaml:"publisher"`
+	Queues    config.OperatorQueueConfig `yaml:"-"`
 }
 
 func LoadConfig() AppConfig {
@@ -48,12 +45,14 @@ func LoadConfig() AppConfig {
 		log.Fatal("app name must be without '-' : it's not a valid metric name")
 	}
 
+	operator := envString("OPERATOR", "mobilink")
+	operators := make(map[string]config.OperatorConfig, 1)
+	operators[operator] = config.OperatorConfig{}
+	appConfig.Queues = config.GetOperatorsQueue(operators)[operator]
+
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)
 	appConfig.Consumer.Conn.Host = envString("RBMQ_HOST", appConfig.Consumer.Conn.Host)
 	appConfig.Publisher.Conn.Host = envString("RBMQ_HOST", appConfig.Publisher.Conn.Host)
-
-	appConfig.Queues.In = appConfig.Server.OperatorName + "_requests"
-	appConfig.Queues.Out = appConfig.Server.OperatorName + "_responses"
 
 	appConfig.Mobilink.TransactionLog.ResponseLogPath =
 		envString("MOBILINK_RESPONSE_LOG", appConfig.Mobilink.TransactionLog.ResponseLogPath)

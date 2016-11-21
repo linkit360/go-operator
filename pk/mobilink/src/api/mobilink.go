@@ -25,7 +25,7 @@ import (
 	rec "github.com/vostrok/utils/rec"
 )
 
-func (mb *Mobilink) Tarifficate(record *rec.Record) {
+func (mb *Mobilink) Tarifficate(record *rec.Record) error {
 	log.WithFields(log.Fields{
 		"rec": record,
 	}).Info("start processing")
@@ -35,17 +35,18 @@ func (mb *Mobilink) Tarifficate(record *rec.Record) {
 	if err != nil {
 		BalanceCheckErrors.Inc()
 		record.OperatorErr = err.Error()
-		return
+		return err
 	}
 	if postPaid {
 		record.SubscriptionStatus = "postpaid"
-		return
+		return nil
 	}
 	if err = mb.mt(record); err != nil {
-		TarificateErrors.Inc()
-		record.OperatorErr = err.Error()
+		return err
 	}
+	return nil
 }
+
 func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 	if !My(msisdn) {
 		return false, nil
@@ -147,6 +148,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	req, err := http.NewRequest("POST", mb.conf.Connection.MT.Url, strings.NewReader(requestBody))
 	if err != nil {
 		Errors.Inc()
+		err = fmt.Errorf("http.NewRequest: %s", err.Error())
 
 		log.WithFields(log.Fields{
 			"token":  r.OperatorToken,
@@ -155,7 +157,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 			"time":   now,
 			"error":  err.Error(),
 		}).Error("create POST req to mobilink")
-		err = fmt.Errorf("http.NewRequest: %s", err.Error())
+
 		return err
 	}
 	for k, v := range mb.conf.Connection.MT.Headers {
@@ -242,7 +244,10 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	resp, err := mb.client.Do(req)
 	if err != nil {
 		Errors.Inc()
+		TarificateErrors.Inc()
+		r.OperatorErr = err.Error()
 
+		err = fmt.Errorf("client.Do: %s", err.Error())
 		log.WithFields(log.Fields{
 			"error":  err,
 			"token":  r.OperatorToken,
@@ -250,14 +255,17 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 			"msisdn": msisdn,
 			"time":   now,
 		}).Error("do request to mobilink")
-		err = fmt.Errorf("client.Do: %s", err.Error())
-		return err
+
+		return nil
 	}
 	responseCode = resp.StatusCode
 	mobilinkResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		Errors.Inc()
+		TarificateErrors.Inc()
+		r.OperatorErr = err.Error()
 
+		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
 		log.WithFields(log.Fields{
 			"token":  r.OperatorToken,
 			"tid":    tid,
@@ -265,8 +273,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 			"time":   now,
 			"error":  err,
 		}).Error("get raw body of mobilink response")
-		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
-		return err
+		return nil
 	}
 	defer resp.Body.Close()
 
@@ -343,7 +350,7 @@ func MobilinkHandler(c *gin.Context) {
 	c.Writer.Write([]byte(`<value><i4>0</i4></value>`))
 }
 func (mb *Mobilink) publishTransactionLog(data interface{}) error {
-	event := rabbit.EventNotify{
+	event := amqp.EventNotify{
 		EventName: "send_to_db",
 		EventData: data,
 	}
@@ -352,6 +359,6 @@ func (mb *Mobilink) publishTransactionLog(data interface{}) error {
 		Errors.Inc()
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	mb.notifier.Publish(rabbit.AMQPMessage{mb.conf.TransactionLog.Queue, body})
+	mb.notifier.Publish(amqp.AMQPMessage{mb.conf.TransactionLog.Queue, body})
 	return nil
 }

@@ -6,16 +6,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
-
-	rec "github.com/vostrok/utils/rec"
 )
 
-type EventNotifyUserActions struct {
-	EventName string     `json:"event_name,omitempty"`
-	EventData rec.Record `json:"event_data,omitempty"`
-}
+// get records to send sms from queue *_sms_requests
+// send to operator
+// send response to another queue
 
-func processTarifficate(deliveries <-chan amqp.Delivery) {
+func processSMS(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		log.WithFields(log.Fields{
 			"body": string(msg.Body),
@@ -29,7 +26,7 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 				"error":       err.Error(),
 				"msg":         "dropped",
 				"contentSent": string(msg.Body),
-			}).Error("consume from " + svc.conf.queues.In)
+			}).Error("consume from " + svc.conf.queues.SMSRequest)
 			msg.Ack(false)
 			continue
 		}
@@ -37,33 +34,32 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 		switch {
 		case e.EventName == "send_sms":
 			t := e.EventData
-			_ = svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
-			msg.Ack(false)
-
-		case e.EventName == "charge":
-			t := e.EventData
-
-			var err error
-
-			<-svc.api.ThrottleMT
-			svc.api.Tarifficate(&t)
-
-			// types of cann't process
-			// it isn't types when operator or our error occurs
-			if err != nil {
-				msg.Nack(false, true)
-
+			if err := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText); err != nil {
+				msg.Ack(false)
 				log.WithFields(log.Fields{
 					"rec":   fmt.Sprintf("%#v", t),
 					"msg":   "requeue",
 					"error": err.Error(),
 				}).Error("can't process")
-				continue
+				t.OperatorErr = err.Error()
 			}
 
-			log.WithFields(log.Fields{
-				"rec": t,
-			}).Info("processed successfully")
+			if err := svc.publishSMSResponse("sms_response", t); err != nil {
+				log.WithFields(log.Fields{
+					"queue": svc.conf.queues.SMSRequest,
+					"event": e.EventName,
+					"tid":   t.Tid,
+					"error": err.Error(),
+				}).Error("send sms error")
+
+			} else {
+				log.WithFields(log.Fields{
+					"queue": svc.conf.queues.SMSRequest,
+					"event": e.EventName,
+					"tid":   t.Tid,
+				}).Info("processed successfully")
+
+			}
 		default:
 			svc.m.Dropped.Inc()
 			msg.Ack(false)
