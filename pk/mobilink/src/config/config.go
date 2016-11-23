@@ -21,14 +21,14 @@ type ServerConfig struct {
 type AppConfig struct {
 	Name      string                     `yaml:"name"`
 	Server    ServerConfig               `yaml:"server"`
-	Mobilink  mobilink_api.Config        `yaml:"mobilink"`
 	Consumer  amqp.ConsumerConfig        `yaml:"consumer"`
 	Publisher amqp.NotifierConfig        `yaml:"publisher"`
+	Mobilink  mobilink_api.Config        `yaml:"mobilink"`
 	Queues    config.OperatorQueueConfig `yaml:"-"`
 }
 
 func LoadConfig() AppConfig {
-	cfg := flag.String("config", "dev/appconfig.yml", "configuration yml file")
+	cfg := flag.String("config", "dev/mobilink.yml", "configuration yml file")
 	flag.Parse()
 	var appConfig AppConfig
 

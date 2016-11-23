@@ -22,7 +22,7 @@ publisher:
     host: 35.154.8.158
     port: 5672
 
-api:
+mobilink:
   enabled: true
   save_retries: true
   log_transaction:
@@ -32,8 +32,7 @@ api:
   location: Asia/Karachi
   connection:
     mt:
-#      url: http://182.16.255.46:10020/Air
-      url: http://localhost:50305/mobilink_handler
+      url: http://localhost:50306/mobilink_handler
       headers:
         Content-Type: text/xml
         Authorization: Basic SU5UTE5LVVI6TGluayMwMTAx

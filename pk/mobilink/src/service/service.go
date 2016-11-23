@@ -63,10 +63,8 @@ func InitService(
 	}
 
 	svc.m = initMetrics()
-
-	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
-
 	svc.notifier = amqp.NewNotifier(notifierConfig)
+	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
 
 	// process consumer
 	svc.consumer = amqp.NewConsumer(consumerConfig)

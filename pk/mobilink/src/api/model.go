@@ -50,8 +50,8 @@ type SmppConfig struct {
 	Timeout     int    `default:"20" yaml:"timeout"`
 }
 type MTConfig struct {
-	Url                  string            `default:"http://182.16.255.46:10020/Air" yaml:"url" json:"url"`
-	Headers              map[string]string `yaml:"headers" json:"headers"`
+	Url                  string            `yaml:"url" default:"http://localhost:50306/mobilink_handler" `
+	Headers              map[string]string `yaml:"headers"`
 	TimeoutSec           int               `default:"20" yaml:"timeout" json:"timeout"`
 	TarifficateBody      string            `yaml:"mt_body"`
 	PaidBodyContains     []string          `yaml:"paid_body_contains" json:"paid_body_contains"`
