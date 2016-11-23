@@ -33,15 +33,20 @@ func (mb *Mobilink) Tarifficate(record *rec.Record) error {
 
 	postPaid, err := mb.balanceCheck(record.Tid, record.Msisdn)
 	if err != nil {
-		BalanceCheckErrors.Inc()
+		Errors.Inc()
+		balanceCheckErrors.Inc()
 		record.OperatorErr = err.Error()
 		return err
+	} else {
+		balanceCheckSuccess.Inc()
 	}
 	if postPaid {
 		record.SubscriptionStatus = "postpaid"
 		return nil
 	}
 	if err = mb.mt(record); err != nil {
+		Errors.Inc()
+		chargeErrors.Inc()
 		return err
 	}
 	return nil
@@ -51,7 +56,6 @@ func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 	if !My(msisdn) {
 		return false, nil
 	}
-	BalanceCheckOverall.Inc()
 	token := getToken(msisdn)
 	now := time.Now().In(mb.location).Format("20060102T15:04:05-0700")
 	requestBody := mb.conf.Connection.MT.CheckBalanceBody
@@ -61,7 +65,6 @@ func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 
 	req, err := http.NewRequest("POST", mb.conf.Connection.MT.Url, strings.NewReader(requestBody))
 	if err != nil {
-		Errors.Inc()
 		err = fmt.Errorf("http.NewRequest: %s", err.Error())
 		return false, err
 	}
@@ -100,7 +103,6 @@ func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 
 	mobilinkResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		Errors.Inc()
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
 		return false, err
 	}
@@ -113,6 +115,7 @@ func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 		}
 	}
 	return false, nil
+
 }
 func (mb *Mobilink) mt(r *rec.Record) error {
 	msisdn := r.Msisdn
@@ -126,8 +129,6 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 		}).Debug("is not mobilink")
 		return nil
 	}
-	TarificateOverall.Inc()
-
 	r.Paid = false
 	r.OperatorToken = msisdn + time.Now().Format("20060102150405")[6:]
 	now := time.Now().In(mb.location).Format("20060102T15:04:05-0700")
@@ -243,8 +244,6 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 
 	resp, err := mb.client.Do(req)
 	if err != nil {
-		Errors.Inc()
-		TarificateErrors.Inc()
 		r.OperatorErr = err.Error()
 
 		err = fmt.Errorf("client.Do: %s", err.Error())
@@ -261,8 +260,6 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	responseCode = resp.StatusCode
 	mobilinkResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		Errors.Inc()
-		TarificateErrors.Inc()
 		r.OperatorErr = err.Error()
 
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
@@ -273,7 +270,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 			"time":   now,
 			"error":  err,
 		}).Error("get raw body of mobilink response")
-		return nil
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -281,7 +278,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	for _, v = range mb.conf.Connection.MT.PaidBodyContains {
 		if strings.Contains(string(mobilinkResponse), v) {
 			SinceSuccessPaid.Set(.0)
-
+			chargeSuccess.Inc()
 			log.WithFields(log.Fields{
 				"msisdn": msisdn,
 				"token":  r.OperatorToken,
@@ -300,8 +297,9 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 
 	return nil
 }
+
 func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
-	SMSOverall.Inc()
+	smsSuccess.Inc()
 	shortMsg, err := mb.smpp.Submit(&smpp_client.ShortMessage{
 		Src:      mb.conf.Connection.Smpp.ShortNumber,
 		Dst:      "00" + msisdn[2:],
@@ -310,7 +308,7 @@ func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 	})
 
 	if err == smpp_client.ErrNotConnected {
-		SMSError.Inc()
+		smsError.Inc()
 		Errors.Inc()
 
 		log.WithFields(log.Fields{
@@ -322,7 +320,7 @@ func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 		return fmt.Errorf("smpp.Submit: %s", err.Error())
 	}
 	if err != nil {
-		SMSError.Inc()
+		smsError.Inc()
 		Errors.Inc()
 
 		log.WithFields(log.Fields{

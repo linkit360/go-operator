@@ -11,7 +11,6 @@ import (
 // get records to send sms from queue *_sms_requests
 // send to operator
 // send response to another queue
-
 func processSMS(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		log.WithFields(log.Fields{

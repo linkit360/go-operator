@@ -62,12 +62,12 @@ type MTConfig struct {
 var (
 	SMPPConnected       prometheus.Gauge
 	SinceSuccessPaid    prometheus.Gauge
-	SMSOverall          m.Gauge
-	SMSError            m.Gauge
-	BalanceCheckOverall m.Gauge
-	BalanceCheckErrors  m.Gauge
-	TarificateOverall   m.Gauge
-	TarificateErrors    m.Gauge
+	smsSuccess          m.Gauge
+	smsError            m.Gauge
+	balanceCheckErrors  m.Gauge
+	balanceCheckSuccess m.Gauge
+	chargeSuccess       m.Gauge
+	chargeErrors        m.Gauge
 	Errors              m.Gauge
 )
 
@@ -75,12 +75,12 @@ func initMetrics() {
 	SMPPConnected = m.PrometheusGauge("", "", "smpp_connected", "mobilink smppconnected")
 	SinceSuccessPaid = m.PrometheusGauge("", "", "since_success_paid", "mobilink since success paid")
 
-	SMSOverall = m.NewGauge("", "", "sms_overall", "balance check overall")
-	SMSError = m.NewGauge("", "", "sms_errors", "balance check errors")
-	BalanceCheckOverall = m.NewGauge("", "", "balance_check_overall", "balance check overall")
-	BalanceCheckErrors = m.NewGauge("", "", "balance_check_errors", "balance check failed")
-	TarificateOverall = m.NewGauge("", "", "tarofficate_overall", "tarifficate overall")
-	TarificateErrors = m.NewGauge("", "", "tarofficate_errors", "tarifficate failed")
+	smsSuccess = m.NewGauge("", "", "sms_success", "balance check success")
+	smsError = m.NewGauge("", "", "sms_errors", "balance check errors")
+	balanceCheckSuccess = m.NewGauge("", "", "balance_check_success", "balance check success")
+	balanceCheckErrors = m.NewGauge("", "", "balance_check_errors", "balance check failed")
+	chargeErrors = m.NewGauge("", "", "charge_errors", "charge has failed")
+	chargeSuccess = m.NewGauge("", "", "charge_success", "charge ok")
 	Errors = m.NewGauge("", "", "errors", "errors")
 
 	go func() {
