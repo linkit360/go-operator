@@ -22,7 +22,8 @@ type EventNotifyUserActions struct {
 func processTarifficate(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		log.WithFields(log.Fields{
-			"body": string(msg.Body),
+			"priority": msg.Priority,
+			"body":     string(msg.Body),
 		}).Debug("start process")
 
 		var e EventNotifyUserActions
