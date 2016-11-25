@@ -343,9 +343,23 @@ func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 func getToken(msisdn string) string {
 	return msisdn + time.Now().Format("20060102150405")[6:]
 }
-func MobilinkHandler(c *gin.Context) {
+func AddMobilinkTestHandlers(r *gin.Engine) {
+	rgMobilink := r.Group("/mobilink")
+	rgMobilink.POST("/paid", paidHandler)
+	rgMobilink.POST("/failed", failedHandler)
+	rgMobilink.POST("/postpaid", postPaidHandler)
+}
+func paidHandler(c *gin.Context) {
 	c.Writer.WriteHeader(200)
 	c.Writer.Write([]byte(`<value><i4>0</i4></value>`))
+}
+func failedHandler(c *gin.Context) {
+	c.Writer.WriteHeader(200)
+	c.Writer.Write([]byte(`<value><i4>112</i4></value>`))
+}
+func postPaidHandler(c *gin.Context) {
+	c.Writer.WriteHeader(200)
+	c.Writer.Write([]byte(`<value><i4>11</i4></value>`))
 }
 func (mb *Mobilink) publishTransactionLog(data interface{}) error {
 	event := amqp.EventNotify{

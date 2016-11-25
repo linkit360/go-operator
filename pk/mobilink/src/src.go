@@ -29,8 +29,7 @@ func RunServer() {
 	log.WithField("CPUCount", nuCPU)
 
 	r := gin.New()
-	rgMobilink := r.Group("/mobilink_handler")
-	rgMobilink.POST("", mobilink_api.MobilinkHandler)
+	mobilink_api.AddMobilinkTestHandlers(r)
 
 	r.Run(":" + appConfig.Server.Port)
 

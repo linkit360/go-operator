@@ -32,7 +32,7 @@ mobilink:
   location: Asia/Karachi
   connection:
     mt:
-      url: http://localhost:50306/mobilink_handler
+      url: http://localhost:50306/mobilink/failed
       headers:
         Content-Type: text/xml
         Authorization: Basic SU5UTE5LVVI6TGluayMwMTAx
