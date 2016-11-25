@@ -30,6 +30,7 @@ func RunServer() {
 
 	r := gin.New()
 	mobilink_api.AddMobilinkTestHandlers(r)
+	m.AddHandler(r)
 
 	r.Run(":" + appConfig.Server.Port)
 

@@ -75,8 +75,8 @@ func initMetrics() {
 	SMPPConnected = m.PrometheusGauge("", "", "smpp_connected", "mobilink smppconnected")
 	SinceSuccessPaid = m.PrometheusGauge("", "", "since_success_paid", "mobilink since success paid")
 
-	smsSuccess = m.NewGauge("", "", "sms_success", "balance check success")
-	smsError = m.NewGauge("", "", "sms_errors", "balance check errors")
+	smsSuccess = m.NewGauge("", "", "sms_success", "sms check success")
+	smsError = m.NewGauge("", "", "sms_errors", "sms check errors")
 	balanceCheckSuccess = m.NewGauge("", "", "balance_check_success", "balance check success")
 	balanceCheckErrors = m.NewGauge("", "", "balance_check_errors", "balance check failed")
 	chargeErrors = m.NewGauge("", "", "charge_errors", "charge has failed")
@@ -86,6 +86,17 @@ func initMetrics() {
 	go func() {
 		for range time.Tick(time.Second) {
 			SinceSuccessPaid.Inc()
+		}
+	}()
+	go func() {
+		for range time.Tick(time.Minute) {
+			smsSuccess.Update()
+			smsError.Update()
+			balanceCheckSuccess.Update()
+			balanceCheckErrors.Update()
+			chargeErrors.Update()
+			chargeSuccess.Update()
+			Errors.Update()
 		}
 	}()
 }

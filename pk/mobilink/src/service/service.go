@@ -13,6 +13,7 @@ import (
 	"github.com/vostrok/utils/amqp"
 	queue_config "github.com/vostrok/utils/config"
 	m "github.com/vostrok/utils/metrics"
+	"time"
 )
 
 var svc Service
@@ -44,6 +45,13 @@ func initMetrics() Metrics {
 		Dropped: m.NewGauge("", "", "dropped", "mobilink queue dropped"),
 		Empty:   m.NewGauge("", "", "empty", "mobilink queue empty"),
 	}
+
+	go func() {
+		for range time.Tick(time.Minute) {
+			m.Dropped.Update()
+			m.Empty.Update()
+		}
+	}()
 	return m
 }
 
