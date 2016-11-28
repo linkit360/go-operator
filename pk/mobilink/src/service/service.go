@@ -22,7 +22,7 @@ type Service struct {
 	TarifficateChan <-chan amqp_driver.Delivery
 	SMSChan         <-chan amqp_driver.Delivery
 	api             *mobilink_api.Mobilink
-	consumer        *amqp.Consumer
+	consumer        Consumer
 	notifier        *amqp.Notifier
 	db              *sql.DB
 	m               Metrics
@@ -55,6 +55,11 @@ func initMetrics() Metrics {
 	return m
 }
 
+type Consumer struct {
+	Requests    *amqp.Consumer
+	SMSRequests *amqp.Consumer
+}
+
 func InitService(
 	serverConfig config.ServerConfig,
 	mbConf mobilink_api.Config,
@@ -75,14 +80,20 @@ func InitService(
 	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
 
 	// process consumer
-	svc.consumer = amqp.NewConsumer(consumerConfig)
-	if err := svc.consumer.Connect(); err != nil {
+	svc.consumer = Consumer{
+		Requests:    amqp.NewConsumer(consumerConfig, queuesConfig.Requests),
+		SMSRequests: amqp.NewConsumer(consumerConfig, queuesConfig.SMSRequest),
+	}
+	if err := svc.consumer.Requests.Connect(); err != nil {
+		log.Fatal("rbmq consumer connect:", err.Error())
+	}
+	if err := svc.consumer.SMSRequests.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
 	}
 
 	// queue for tarifficate requests
 	amqp.InitQueue(
-		svc.consumer,
+		svc.consumer.Requests,
 		svc.TarifficateChan,
 		processTarifficate,
 		serverConfig.ThreadsCount,
@@ -92,7 +103,7 @@ func InitService(
 
 	// queue for sms requests
 	amqp.InitQueue(
-		svc.consumer,
+		svc.consumer.SMSRequests,
 		svc.SMSChan,
 		processSMS,
 		serverConfig.ThreadsCount,
