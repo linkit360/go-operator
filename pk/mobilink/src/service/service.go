@@ -10,10 +10,9 @@ import (
 
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/operator/pk/mobilink/src/config"
+	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 	"github.com/vostrok/utils/amqp"
 	queue_config "github.com/vostrok/utils/config"
-	m "github.com/vostrok/utils/metrics"
-	"time"
 )
 
 var svc Service
@@ -25,7 +24,6 @@ type Service struct {
 	consumer        Consumer
 	notifier        *amqp.Notifier
 	db              *sql.DB
-	m               Metrics
 	conf            Config
 }
 type Config struct {
@@ -33,26 +31,6 @@ type Config struct {
 	queues   queue_config.OperatorQueueConfig
 	consumer amqp.ConsumerConfig
 	notifier amqp.NotifierConfig
-}
-
-type Metrics struct {
-	Dropped m.Gauge
-	Empty   m.Gauge
-}
-
-func initMetrics() Metrics {
-	m := Metrics{
-		Dropped: m.NewGauge("", "", "dropped", "mobilink queue dropped"),
-		Empty:   m.NewGauge("", "", "empty", "mobilink queue empty"),
-	}
-
-	go func() {
-		for range time.Tick(time.Minute) {
-			m.Dropped.Update()
-			m.Empty.Update()
-		}
-	}()
-	return m
 }
 
 type Consumer struct {
@@ -75,7 +53,7 @@ func InitService(
 		notifier: notifierConfig,
 	}
 
-	svc.m = initMetrics()
+	m.Init()
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
 

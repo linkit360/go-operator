@@ -20,6 +20,7 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 	"github.com/gin-gonic/gin"
 
+	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	rec "github.com/vostrok/utils/rec"
@@ -33,20 +34,20 @@ func (mb *Mobilink) Tarifficate(record *rec.Record) error {
 
 	postPaid, err := mb.balanceCheck(record.Tid, record.Msisdn)
 	if err != nil {
-		Errors.Inc()
-		balanceCheckErrors.Inc()
+		m.Errors.Inc()
+		m.BalanceCheckErrors.Inc()
 		record.OperatorErr = err.Error()
 		return err
 	} else {
-		balanceCheckSuccess.Inc()
+		m.BalanceCheckSuccess.Inc()
 	}
 	if postPaid {
 		record.SubscriptionStatus = "postpaid"
 		return nil
 	}
 	if err = mb.mt(record); err != nil {
-		Errors.Inc()
-		chargeErrors.Inc()
+		m.Errors.Inc()
+		m.ChargeErrors.Inc()
 		return err
 	}
 	return nil
@@ -148,7 +149,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 
 	req, err := http.NewRequest("POST", mb.conf.Connection.MT.Url, strings.NewReader(requestBody))
 	if err != nil {
-		Errors.Inc()
+		m.Errors.Inc()
 		err = fmt.Errorf("http.NewRequest: %s", err.Error())
 
 		log.WithFields(log.Fields{
@@ -277,8 +278,8 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	var v string
 	for _, v = range mb.conf.Connection.MT.PaidBodyContains {
 		if strings.Contains(string(mobilinkResponse), v) {
-			SinceSuccessPaid.Set(.0)
-			chargeSuccess.Inc()
+			m.SinceSuccessPaid.Set(.0)
+			m.ChargeSuccess.Inc()
 			log.WithFields(log.Fields{
 				"msisdn": msisdn,
 				"token":  r.OperatorToken,
@@ -299,7 +300,7 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 }
 
 func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
-	smsSuccess.Inc()
+	m.SmsSuccess.Inc()
 	shortMsg, err := mb.smpp.Submit(&smpp_client.ShortMessage{
 		Src:      mb.conf.Connection.Smpp.ShortNumber,
 		Dst:      "00" + msisdn[2:],
@@ -308,8 +309,8 @@ func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 	})
 
 	if err == smpp_client.ErrNotConnected {
-		smsError.Inc()
-		Errors.Inc()
+		m.SmsError.Inc()
+		m.Errors.Inc()
 
 		log.WithFields(log.Fields{
 			"msisdn": msisdn,
@@ -320,8 +321,8 @@ func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 		return fmt.Errorf("smpp.Submit: %s", err.Error())
 	}
 	if err != nil {
-		smsError.Inc()
-		Errors.Inc()
+		m.SmsError.Inc()
+		m.Errors.Inc()
 
 		log.WithFields(log.Fields{
 			"msisdn": msisdn,
@@ -368,7 +369,7 @@ func (mb *Mobilink) publishTransactionLog(data interface{}) error {
 	}
 	body, err := json.Marshal(event)
 	if err != nil {
-		Errors.Inc()
+		m.Errors.Inc()
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	mb.notifier.Publish(amqp.AMQPMessage{mb.conf.TransactionLog.Queue, 0, body})

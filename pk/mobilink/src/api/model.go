@@ -7,10 +7,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
-	"github.com/prometheus/client_golang/prometheus"
 
+	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 	"github.com/vostrok/utils/amqp"
-	m "github.com/vostrok/utils/metrics"
 )
 
 type Mobilink struct {
@@ -59,48 +58,6 @@ type MTConfig struct {
 	PostPaidBodyContains []string          `yaml:"postpaid_body_contains" json:"postpaid_body_contains"`
 }
 
-var (
-	SMPPConnected       prometheus.Gauge
-	SinceSuccessPaid    prometheus.Gauge
-	smsSuccess          m.Gauge
-	smsError            m.Gauge
-	balanceCheckErrors  m.Gauge
-	balanceCheckSuccess m.Gauge
-	chargeSuccess       m.Gauge
-	chargeErrors        m.Gauge
-	Errors              m.Gauge
-)
-
-func initMetrics() {
-	SMPPConnected = m.PrometheusGauge("", "", "smpp_connected", "mobilink smppconnected")
-	SinceSuccessPaid = m.PrometheusGauge("", "", "since_success_paid", "mobilink since success paid")
-
-	smsSuccess = m.NewGauge("", "", "sms_success", "sms check success")
-	smsError = m.NewGauge("", "", "sms_errors", "sms check errors")
-	balanceCheckSuccess = m.NewGauge("", "", "balance_check_success", "balance check success")
-	balanceCheckErrors = m.NewGauge("", "", "balance_check_errors", "balance check failed")
-	chargeErrors = m.NewGauge("", "", "charge_errors", "charge has failed")
-	chargeSuccess = m.NewGauge("", "", "charge_success", "charge ok")
-	Errors = m.NewGauge("", "", "errors", "errors")
-
-	go func() {
-		for range time.Tick(time.Second) {
-			SinceSuccessPaid.Inc()
-		}
-	}()
-	go func() {
-		for range time.Tick(time.Minute) {
-			smsSuccess.Update()
-			smsError.Update()
-			balanceCheckSuccess.Update()
-			balanceCheckErrors.Update()
-			chargeErrors.Update()
-			chargeSuccess.Update()
-			Errors.Update()
-		}
-	}()
-}
-
 // prefix from table
 func My(msisdn string) bool {
 	return msisdn[:2] == "92"
@@ -113,7 +70,7 @@ func Init(
 	mobilinkConf Config,
 	notifier *amqp.Notifier,
 ) *Mobilink {
-	initMetrics()
+
 	mb := &Mobilink{
 		rps:  mobilinkRps,
 		conf: mobilinkConf,
@@ -156,7 +113,7 @@ func Init(
 	go func() {
 		for c := range connStatus {
 			if c.Status().String() != "Connected" {
-				SMPPConnected.Set(0)
+				m.SMPPConnected.Set(0)
 				log.WithFields(log.Fields{
 					"operator": "mobilink",
 					"status":   c.Status().String(),
@@ -167,7 +124,7 @@ func Init(
 					"operator": "mobilink",
 					"status":   c.Status().String(),
 				}).Info("smpp moblink connect status")
-				SMPPConnected.Set(1)
+				m.SMPPConnected.Set(1)
 			}
 		}
 	}()

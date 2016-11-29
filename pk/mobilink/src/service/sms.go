@@ -6,6 +6,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
+
+	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 )
 
 // get records to send sms from queue *_sms_requests
@@ -19,7 +21,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 
 		var e EventNotifyUserActions
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
-			svc.m.Dropped.Inc()
+			m.Dropped.Inc()
 
 			log.WithFields(log.Fields{
 				"error":       err.Error(),
@@ -60,7 +62,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 
 			}
 		default:
-			svc.m.Dropped.Inc()
+			m.Dropped.Inc()
 			msg.Ack(false)
 			log.WithFields(log.Fields{
 				"eventName": e.EventName,
