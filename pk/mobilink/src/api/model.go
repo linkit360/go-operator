@@ -2,7 +2,6 @@ package mobilink
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -10,6 +9,7 @@ import (
 
 	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 	"github.com/vostrok/utils/amqp"
+	logger "github.com/vostrok/utils/log"
 )
 
 type Mobilink struct {
@@ -79,10 +79,10 @@ func Init(
 
 	mb.notifier = notifier
 	mb.ThrottleMT = time.Tick(time.Second / time.Duration(mobilinkConf.Rps))
-	mb.requestLog = getLogger(mobilinkConf.TransactionLog.RequestLogPath)
+	mb.requestLog = logger.GetFileLogger(mobilinkConf.TransactionLog.RequestLogPath)
 	log.Info("request logger init done")
 
-	mb.responseLog = getLogger(mobilinkConf.TransactionLog.ResponseLogPath)
+	mb.responseLog = logger.GetFileLogger(mobilinkConf.TransactionLog.ResponseLogPath)
 	log.Info("response logger init done")
 
 	var err error
@@ -129,19 +129,4 @@ func Init(
 		}
 	}()
 	return mb
-}
-func getLogger(path string) *log.Logger {
-	handler, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0755)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"path":  path,
-			"error": err.Error(),
-		}).Fatal("cannot open file")
-	}
-	return &log.Logger{
-		Out:       handler,
-		Formatter: new(log.TextFormatter),
-		Hooks:     make(log.LevelHooks),
-		Level:     log.DebugLevel,
-	}
 }

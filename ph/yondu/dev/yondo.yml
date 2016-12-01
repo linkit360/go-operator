@@ -1,0 +1,34 @@
+name: mumbai_yondo
+
+server:
+  port: 50306
+  threads_count: 1
+  operator_name: yondo
+
+yondo:
+  enabled: true
+  save_retries: true
+  log_transaction:
+    queue: transaction_log
+    response: /var/log/linkit/response_yondo.log
+    request: /var/log/linkit/request_yondo.log
+  location: Asia/Karachi
+  connection:
+
+consumer:
+  queue_prefetch_count: 4
+  reconnect_delay: 10
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
+publisher:
+  chan_capacity: 100000
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
