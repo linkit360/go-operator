@@ -6,14 +6,24 @@ server:
   operator_name: yondo
 
 yondo:
-  enabled: true
-  save_retries: true
+  timeout: 40
+  api_url: http://localhost:50306/yondu
+  auth:
+    user: 123
+    pass: 432
   log_transaction:
     queue: transaction_log
     response: /var/log/linkit/response_yondo.log
     request: /var/log/linkit/request_yondo.log
   location: Asia/Karachi
-  connection:
+  response_code:
+    2001: verification sent
+    2002: invalid mobile number
+    2003: verification successful
+    2004: invalid code combination
+    2005: charged failed
+    2006: successfully processed
+    2007: invalid tariff
 
 consumer:
   queue_prefetch_count: 4

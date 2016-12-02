@@ -1,6 +1,7 @@
 package yondo
 
 import (
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -13,7 +14,15 @@ import (
 )
 
 type Config struct {
+	Auth           BasicAuth            `yaml:"auth"`
+	Timeout        int                  `default:"30" yaml:"timeout"`
+	APIUrl         string               `default:"http://localhost:50306/" yaml:"api_url"`
 	TransactionLog TransactionLogConfig `yaml:"log_transaction"`
+	ResponseCode   map[int]string       `yaml:"response_code"`
+}
+type BasicAuth struct {
+	User string `yaml:"user"`
+	Pass string `yaml:"pass"`
 }
 type Yondu struct {
 	conf        Config
@@ -31,8 +40,13 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/yondu/request.log" yaml:"request"`
 }
 
+func basicAuth(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
 func Init(yConf Config, inMemConfig inmem_client.RPCClientConfig) *Yondu {
-	if err := inmem_client.Init(inMemConfig); err != nil {
+	if err := inmem_client.Init(inMemConfig, inmem_client.InitMetrics()); err != nil {
 		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
 	}
 	y := Yondu{
