@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	Success m.Gauge
-	Errors  m.Gauge
-	Dropped m.Gauge
-	Empty   m.Gauge
+	Success        m.Gauge
+	Errors         m.Gauge
+	WrongParameter m.Gauge
+	Dropped        m.Gauge
+	Empty          m.Gauge
 )
 
 func Init() {
@@ -26,6 +27,7 @@ func Init() {
 		for range time.Tick(time.Minute) {
 			Success.Update()
 			Errors.Update()
+			WrongParameter.Update()
 			Dropped.Update()
 			Empty.Update()
 		}

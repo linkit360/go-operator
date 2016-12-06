@@ -78,6 +78,7 @@ func Init(
 	log.Info("mb metrics init done")
 
 	mb.notifier = notifier
+
 	mb.ThrottleMT = time.Tick(time.Second / time.Duration(mobilinkConf.Rps))
 	mb.requestLog = logger.GetFileLogger(mobilinkConf.TransactionLog.RequestLogPath)
 	log.Info("request logger init done")

@@ -7,6 +7,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -22,6 +23,7 @@ type EventNotifyUserActions struct {
 
 func processTarifficate(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
+		begin := time.Now()
 		log.WithFields(log.Fields{
 			"priority": msg.Priority,
 			"body":     string(msg.Body),
@@ -36,7 +38,12 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 				"msg":         "dropped",
 				"contentSent": string(msg.Body),
 			}).Error("consume from " + svc.conf.queues.Requests)
-			msg.Ack(false)
+
+			if err := msg.Ack(false); err != nil {
+				log.WithFields(log.Fields{
+					"error": err.Error(),
+				}).Error("cannot ack")
+			}
 			continue
 		}
 
@@ -48,11 +55,15 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 
 			<-svc.api.ThrottleMT
 			if err = svc.api.Tarifficate(&t); err != nil {
-				msg.Nack(false, true)
+				if err := msg.Nack(false, true); err != nil {
+					log.WithFields(log.Fields{
+						"error": err.Error(),
+					}).Error("cannot nack")
+				}
+
 				log.WithFields(log.Fields{
-					"rec":   fmt.Sprintf("%#v", t),
-					"msg":   "requeue",
-					"error": err.Error(),
+					"error":  err.Error(),
+					"action": "requeue",
 				}).Error("can't process")
 				continue
 			}
@@ -63,25 +74,30 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 					"event": e.EventName,
 					"tid":   t.Tid,
 					"error": err.Error(),
-				}).Error("charge request error")
-
+				}).Error("charge publish")
 			} else {
 				log.WithFields(log.Fields{
 					"queue": svc.conf.queues.Requests,
 					"event": e.EventName,
 					"tid":   t.Tid,
+					"paid":  t.Paid,
+					"took":  time.Since(begin),
 				}).Info("processed successfully")
 			}
 		default:
 			m.Dropped.Inc()
-			msg.Ack(false)
+
 			log.WithFields(log.Fields{
 				"eventName": e.EventName,
+				"data":      fmt.Sprintf("%#v", e.EventData),
 				"msg":       "dropped",
 			}).Error("unknown event name")
-			continue
 		}
 
-		msg.Ack(false)
+		if err := msg.Ack(false); err != nil {
+			log.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Error("cannot ack")
+		}
 	}
 }

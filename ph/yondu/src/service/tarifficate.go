@@ -40,12 +40,12 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 		}
 
 		switch {
-		case e.EventName == "charge":
+		case e.EventName == "SendConsent":
 			t := e.EventData
 
 			var err error
 
-			<-svc.api.ThrottleMT
+			//<-svc.api.ThrottleMT
 			if err = svc.api.Tarifficate(&t); err != nil {
 				msg.Nack(false, true)
 				log.WithFields(log.Fields{
