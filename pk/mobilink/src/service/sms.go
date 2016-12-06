@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -28,8 +29,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				"msg":         "dropped",
 				"contentSent": string(msg.Body),
 			}).Error("consume from " + svc.conf.queues.SMSRequest)
-			msg.Ack(false)
-			continue
+			goto ack
 		}
 
 		switch {
@@ -52,7 +52,6 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 					"tid":   t.Tid,
 					"error": err.Error(),
 				}).Error("send sms error")
-
 			} else {
 				log.WithFields(log.Fields{
 					"queue": svc.conf.queues.SMSRequest,
@@ -63,14 +62,21 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 			}
 		default:
 			m.Dropped.Inc()
-			msg.Ack(false)
+
 			log.WithFields(log.Fields{
 				"eventName": e.EventName,
 				"msg":       "dropped",
 			}).Error("unknown event name")
-			continue
 		}
 
-		msg.Ack(false)
+	ack:
+		if err := msg.Ack(false); err != nil {
+			log.WithFields(log.Fields{
+				"tid":   e.EventData.Tid,
+				"error": err.Error(),
+			}).Error("cannot ack")
+			time.Sleep(time.Second)
+			goto ack
+		}
 	}
 }

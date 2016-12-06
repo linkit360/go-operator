@@ -38,13 +38,7 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 				"msg":         "dropped",
 				"contentSent": string(msg.Body),
 			}).Error("consume from " + svc.conf.queues.Requests)
-
-			if err := msg.Ack(false); err != nil {
-				log.WithFields(log.Fields{
-					"error": err.Error(),
-				}).Error("cannot ack")
-			}
-			continue
+			goto ack
 		}
 
 		switch {
@@ -55,20 +49,26 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 
 			<-svc.api.ThrottleMT
 			if err = svc.api.Tarifficate(&t); err != nil {
-				if err := msg.Nack(false, true); err != nil {
-					log.WithFields(log.Fields{
-						"error": err.Error(),
-					}).Error("cannot nack")
-				}
-
 				log.WithFields(log.Fields{
 					"error":  err.Error(),
 					"action": "requeue",
 				}).Error("can't process")
+
+			nack:
+				if err := msg.Nack(false, true); err != nil {
+					log.WithFields(log.Fields{
+						"tid":   t.Tid,
+						"error": err.Error(),
+					}).Error("cannot ack")
+					time.Sleep(time.Second)
+					goto nack
+				}
 				continue
 			}
 
 			if err := svc.publishResponse("operator_response", t); err != nil {
+				m.Dropped.Inc()
+
 				log.WithFields(log.Fields{
 					"queue": svc.conf.queues.Requests,
 					"event": e.EventName,
@@ -94,10 +94,14 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 			}).Error("unknown event name")
 		}
 
+	ack:
 		if err := msg.Ack(false); err != nil {
 			log.WithFields(log.Fields{
+				"tid":   e.EventData.Tid,
 				"error": err.Error(),
 			}).Error("cannot ack")
+			time.Sleep(time.Second)
+			goto ack
 		}
 	}
 }
