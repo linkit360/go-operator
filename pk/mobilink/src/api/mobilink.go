@@ -133,19 +133,19 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	r.Paid = false
 	r.OperatorToken = msisdn + time.Now().Format("20060102150405")[6:]
 	now := time.Now().In(mb.location).Format("20060102T15:04:05-0700")
-
-	log.WithFields(log.Fields{
-		"token":  r.OperatorToken,
-		"tid":    tid,
-		"msisdn": msisdn,
-		"time":   now,
-	}).Debug("prepare to send to mobilink")
-
 	requestBody := mb.conf.Connection.MT.TarifficateBody
 	requestBody = strings.Replace(requestBody, "%price%", "-"+strconv.Itoa(price), 1)
 	requestBody = strings.Replace(requestBody, "%msisdn%", msisdn[2:], 1)
 	requestBody = strings.Replace(requestBody, "%token%", r.OperatorToken, 1)
 	requestBody = strings.Replace(requestBody, "%time%", now, 1)
+
+	log.WithFields(log.Fields{
+		"token":  r.OperatorToken,
+		"tid":    tid,
+		"msisdn": msisdn,
+		"price":  price,
+		"time":   now,
+	}).Debug("prepared for telco req")
 
 	req, err := http.NewRequest("POST", mb.conf.Connection.MT.Url, strings.NewReader(requestBody))
 	if err != nil {
