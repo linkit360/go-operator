@@ -16,7 +16,8 @@ var (
 	Empty          m.Gauge
 )
 
-func Init() {
+func Init(appName string) {
+	m.Init(appName)
 
 	Success = m.NewGauge("", "", "success", "success")
 	Errors = m.NewGauge("", "", "errors", "errors")

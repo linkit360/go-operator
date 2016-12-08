@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/vostrok/operator/pk/yondo/src"
+	"github.com/vostrok/operator/ph/yondu/src"
 )
 
 func main() {

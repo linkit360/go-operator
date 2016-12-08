@@ -1,6 +1,5 @@
 package src
 
-// Former corner for operator service
 import (
 	"runtime"
 
@@ -8,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	//yondo "github.com/vostrok/operator/pk/yondo/src/api"
-	"github.com/vostrok/operator/pk/yondo/src/config"
-	"github.com/vostrok/operator/pk/yondo/src/service"
+	"github.com/vostrok/operator/ph/yondu/src/config"
+	"github.com/vostrok/operator/ph/yondu/src/service"
 	m "github.com/vostrok/utils/metrics"
 )
 
@@ -19,7 +18,6 @@ func RunServer() {
 	service.InitService(
 		appConfig.Server,
 		appConfig.Yondo,
-		appConfig.Queues,
 		appConfig.Consumer,
 		appConfig.Publisher,
 	)

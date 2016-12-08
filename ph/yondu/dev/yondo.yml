@@ -8,14 +8,14 @@ server:
 yondo:
   timeout: 40
   api_url: http://localhost:50306/yondu
+  location: Asia/Karachi
   auth:
     user: 123
     pass: 432
-  log_transaction:
-    queue: transaction_log
-    response: /var/log/linkit/response_yondo.log
-    request: /var/log/linkit/request_yondo.log
-  location: Asia/Karachi
+  transaction_log:
+    response: /var/log/linkit/yondu/responses.log
+    request: /var/log/linkit/yondu/requests.log
+
   response_code:
     2001: verification sent
     2002: invalid mobile number
@@ -24,6 +24,26 @@ yondo:
     2005: charged failed
     2006: successfully processed
     2007: invalid tariff
+  queues:
+    send_consent:
+      name: send_consent
+      prefetch_count:
+      threads_count:
+    verify_trans_code:
+      name: verify_trans_code
+      prefetch_count: 50
+      threads_count: 10
+    yondu_charge:
+      name: yondu_requests
+      prefetch_count: 50
+      threads_count: 10
+    yondu_mt:
+      name: yondu_mt
+      prefetch_count: 50
+      threads_count: 10
+    transaction_log: transaction_log
+    callback: yondu_responses
+    mo: yondu_sms_responses
 
 consumer:
   queue_prefetch_count: 4
