@@ -19,6 +19,7 @@ func processVerifyTransCode(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		var t rec.Record
 		var err error
+		var operatorErr error
 		var code int
 		var yResp YonduResponse
 		begin := time.Now()
@@ -54,9 +55,22 @@ func processVerifyTransCode(deliveries <-chan amqp.Delivery) {
 			goto ack
 		}
 
-		yResp, err = svc.api.VerifyTransCode(t.Msisdn, code)
-		logResponse(t, yResp, begin, err)
-		if err != nil {
+		yResp, operatorErr = svc.api.VerifyTransCode(t.Msisdn, code)
+		logResponse("verifytranscode", t, yResp, begin, operatorErr)
+		if err := svc.publishTransactionLog("sent_verify_transcode", t); err != nil {
+			log.WithFields(log.Fields{
+				"event": e.EventName,
+				"tid":   t.Tid,
+				"error": err.Error(),
+			}).Error("sent to transaction log failed")
+		} else {
+			log.WithFields(log.Fields{
+				"queue": svc.conf.Yondu.Queue.VerifyTransCode.Name,
+				"event": e.EventName,
+				"tid":   t.Tid,
+			}).Info("success(sent to telco, sent to transaction log)")
+		}
+		if operatorErr != nil {
 			log.WithFields(log.Fields{
 				"rec":   fmt.Sprintf("%#v", t),
 				"msg":   "requeue",
@@ -73,20 +87,6 @@ func processVerifyTransCode(deliveries <-chan amqp.Delivery) {
 				goto nack
 			}
 			continue
-		}
-
-		if err := svc.publishTransactionLog("sent_verify_transcode", t); err != nil {
-			log.WithFields(log.Fields{
-				"event": e.EventName,
-				"tid":   t.Tid,
-				"error": err.Error(),
-			}).Error("sent to transaction log failed")
-		} else {
-			log.WithFields(log.Fields{
-				"queue": svc.conf.Yondu.Queue.VerifyTransCode.Name,
-				"event": e.EventName,
-				"tid":   t.Tid,
-			}).Info("success(sent to telco, sent to transaction log)")
 		}
 	ack:
 		if err := msg.Ack(false); err != nil {

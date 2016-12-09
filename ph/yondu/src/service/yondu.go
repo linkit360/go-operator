@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	m "github.com/vostrok/operator/ph/yondu/src/metrics"
-	//m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	"github.com/vostrok/operator/ph/yondu/src/config"
+	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	logger "github.com/vostrok/utils/log"
-	"strconv"
 )
 
 type Yondu struct {
@@ -45,6 +44,7 @@ type YonduResponse struct {
 		Message string `json:"message"`
 		Code    int    `json:"code"`
 	} `json:"response"`
+	ResponseTime time.Time `json:"response_time"`
 }
 
 //API URL: {URL}/m360api/v1/consent/{msisdn}/{amount}
@@ -194,7 +194,17 @@ func (y *Yondu) Callback(c *gin.Context) {
 		absentParameter("status_code", c)
 		return
 	}
-
+	if err := svc.publishCallback(p); err != nil {
+		log.WithFields(log.Fields{
+			"p":     fmt.Sprintf("%#v", p),
+			"error": err.Error(),
+		}).Error("sent callback failed")
+	} else {
+		log.WithFields(log.Fields{
+			"msisdn":  p.Msisdn,
+			"transId": p.TransID,
+		}).Info("sent")
+	}
 }
 
 //MO
@@ -233,6 +243,17 @@ func (y *Yondu) MO(c *gin.Context) {
 	if !ok {
 		absentParameter("message", c)
 		return
+	}
+	if err := svc.publishMO(p); err != nil {
+		log.WithFields(log.Fields{
+			"p":     fmt.Sprintf("%#v", p),
+			"error": err.Error(),
+		}).Error("sent mo failed")
+	} else {
+		log.WithFields(log.Fields{
+			"msisdn":  p.Msisdn,
+			"transId": p.TransID,
+		}).Info("sent")
 	}
 }
 

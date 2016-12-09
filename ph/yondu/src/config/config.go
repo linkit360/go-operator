@@ -52,9 +52,9 @@ type YonduQueuesConfig struct {
 	VerifyTransCode config.ConsumeQueueConfig `yaml:"verify_trans_code"`
 	Charge          config.ConsumeQueueConfig `yaml:"yondu_charge"` // name yondu_requests
 	MT              config.ConsumeQueueConfig `yaml:"yondu_mt"`
-	TransactionLog  string                    `yaml:"transaction_log"`
-	CallBack        string                    `yaml:"callback" default:"yondu_responses"`
-	MO              string                    `yaml:"mo" default:"yondu_sms_responses"`
+	CallBack        config.ConsumeQueueConfig `yaml:"callback"` //  "yondu_responses"`
+	MO              config.ConsumeQueueConfig `yaml:"mo"`       // "yondu_sms_responses"
+	TransactionLog  string                    `yaml:"transaction_log" default:"transaction_log"`
 }
 
 func LoadConfig() AppConfig {

@@ -17,6 +17,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		var t rec.Record
 		var err error
+		var operatorErr error
 		var amount string
 		var yResp YonduResponse
 		begin := time.Now()
@@ -41,9 +42,23 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		t = e.EventData
 
 		//<-svc.api.ThrottleMT
-		yResp, err = svc.api.SendConsent(t.Msisdn, amount)
-		logResponse(t, yResp, begin, err)
-		if err != nil {
+		yResp, operatorErr = svc.api.SendConsent(t.Msisdn, amount)
+		logResponse("sentconsent", t, yResp, begin, operatorErr)
+		if err := svc.publishTransactionLog("sent_consent", t); err != nil {
+			log.WithFields(log.Fields{
+				"event": e.EventName,
+				"tid":   t.Tid,
+				"error": err.Error(),
+			}).Error("sent to transaction log failed")
+		} else {
+			log.WithFields(log.Fields{
+				"queue": svc.conf.Yondu.Queue.SendConsent.Name,
+				"event": e.EventName,
+				"tid":   t.Tid,
+			}).Info("success(sent to telco, sent to transaction log)")
+		}
+
+		if operatorErr != nil {
 			log.WithFields(log.Fields{
 				"rec":   fmt.Sprintf("%#v", t),
 				"msg":   "requeue",
@@ -62,19 +77,6 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 			continue
 		}
 
-		if err := svc.publishTransactionLog("sent_consent", t); err != nil {
-			log.WithFields(log.Fields{
-				"event": e.EventName,
-				"tid":   t.Tid,
-				"error": err.Error(),
-			}).Error("sent to transaction log failed")
-		} else {
-			log.WithFields(log.Fields{
-				"queue": svc.conf.Yondu.Queue.SendConsent.Name,
-				"event": e.EventName,
-				"tid":   t.Tid,
-			}).Info("success(sent to telco, sent to transaction log)")
-		}
 	ack:
 		if err := msg.Ack(false); err != nil {
 			log.WithFields(log.Fields{

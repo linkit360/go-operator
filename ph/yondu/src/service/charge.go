@@ -16,7 +16,7 @@ import (
 func processCharge(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		var t rec.Record
-		var err error
+		var operatorErr error
 		var amount string
 		var yResp YonduResponse
 		begin := time.Now()
@@ -41,26 +41,8 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		t = e.EventData
 
 		//<-svc.api.ThrottleMT
-		yResp, err = svc.api.Charge(t.Msisdn, amount)
-		logResponse(t, yResp, begin, err)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"rec":   fmt.Sprintf("%#v", t),
-				"msg":   "requeue",
-				"error": err.Error(),
-			}).Error("can't process")
-
-		nack:
-			if err := msg.Nack(false, true); err != nil {
-				log.WithFields(log.Fields{
-					"tid":   e.EventData.Tid,
-					"error": err.Error(),
-				}).Error("cannot nack")
-				time.Sleep(time.Second)
-				goto nack
-			}
-		}
-
+		yResp, operatorErr = svc.api.Charge(t.Msisdn, amount)
+		logResponse("charge", t, yResp, begin, operatorErr)
 		if err := svc.publishTransactionLog("sent_charge_request", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
@@ -73,6 +55,22 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 				"event": e.EventName,
 				"tid":   t.Tid,
 			}).Info("success(sent to telco, sent to transaction log)")
+		}
+		if operatorErr != nil {
+			log.WithFields(log.Fields{
+				"rec":   fmt.Sprintf("%#v", t),
+				"msg":   "requeue",
+				"error": operatorErr.Error(),
+			}).Error("can't process")
+		nack:
+			if err := msg.Nack(false, true); err != nil {
+				log.WithFields(log.Fields{
+					"tid":   e.EventData.Tid,
+					"error": err.Error(),
+				}).Error("cannot nack")
+				time.Sleep(time.Second)
+				goto nack
+			}
 		}
 	ack:
 		if err := msg.Ack(false); err != nil {

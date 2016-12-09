@@ -13,70 +13,60 @@ import (
 	"github.com/vostrok/utils/rec"
 )
 
-func processMT(deliveries <-chan amqp.Delivery) {
+type EventNotifyResponse struct {
+	EventName string        `json:"event_name,omitempty"`
+	EventData YonduResponse `json:"event_data,omitempty"`
+}
+
+func processMO(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
-		var t rec.Record
-		var err error
-		var operatorErr error
-		var yResp YonduResponse
-		begin := time.Now()
 
 		log.WithFields(log.Fields{
 			"priority": msg.Priority,
 			"body":     string(msg.Body),
 		}).Debug("start process")
 
-		var e EventNotify
+		var e EventNotifyResponse
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
 
 			log.WithFields(log.Fields{
-				"error":      err.Error(),
-				"msg":        "dropped",
-				"chargeBody": string(msg.Body),
-			}).Error("consume from " + svc.conf.Yondu.Queue.MT.Name)
+				"error": err.Error(),
+				"msg":   "dropped",
+				"mo":    string(msg.Body),
+			}).Error("consume from " + svc.conf.Yondu.Queue.MO.Name)
 			goto ack
 		}
-		t = e.EventData
-
-		//<-svc.api.ThrottleMT
-		yResp, operatorErr = svc.api.MT(t.Msisdn, t.SMSText)
-		logResponse("mt", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("sent_content", t); err != nil {
+		// prepare rec. record
+		//yondyResponse := e.EventData
+		t := rec.Record{}
+		if err := svc.publishTransactionLog("mo", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
-				"tid":   t.Tid,
+				"mo":    msg.Body,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
-		} else {
-			log.WithFields(log.Fields{
-				"queue": svc.conf.Yondu.Queue.MT.Name,
-				"event": e.EventName,
-				"tid":   t.Tid,
-			}).Info("success(sent to telco, sent to transaction log)")
-		}
-		if operatorErr != nil {
-			log.WithFields(log.Fields{
-				"rec":   fmt.Sprintf("%#v", t),
-				"msg":   "requeue",
-				"error": err.Error(),
-			}).Error("can't process")
-
 		nack:
 			if err := msg.Nack(false, true); err != nil {
 				log.WithFields(log.Fields{
-					"tid":   e.EventData.Tid,
+					"mo":    msg.Body,
 					"error": err.Error(),
 				}).Error("cannot nack")
 				time.Sleep(time.Second)
 				goto nack
 			}
 			continue
+		} else {
+			log.WithFields(log.Fields{
+				"queue": svc.conf.Yondu.Queue.CallBack.Name,
+				"event": e.EventName,
+				"tid":   t.Tid,
+			}).Info("success (sent to transaction log)")
 		}
 	ack:
 		if err := msg.Ack(false); err != nil {
 			log.WithFields(log.Fields{
-				"tid":   e.EventData.Tid,
+				"mo":    msg.Body,
 				"error": err.Error(),
 			}).Error("cannot ack")
 			time.Sleep(time.Second)

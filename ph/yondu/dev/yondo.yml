@@ -25,6 +25,7 @@ yondo:
     2006: successfully processed
     2007: invalid tariff
   queues:
+    transaction_log: transaction_log
     send_consent:
       name: send_consent
       prefetch_count:
@@ -41,9 +42,14 @@ yondo:
       name: yondu_mt
       prefetch_count: 50
       threads_count: 10
-    transaction_log: transaction_log
-    callback: yondu_responses
-    mo: yondu_sms_responses
+    callback:
+      name: yondu_responses
+      prefetch_count: 50
+      threads_count: 10
+    mo:
+      name: yondu_sms_responses
+      prefetch_count: 50
+      threads_count: 10
 
 consumer:
   queue_prefetch_count: 4
