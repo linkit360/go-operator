@@ -18,6 +18,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		var t rec.Record
 		var err error
 		var operatorErr error
+		var ok bool
 		var amount string
 		var yResp YonduResponse
 		begin := time.Now()
@@ -32,9 +33,9 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 			m.Dropped.Inc()
 
 			log.WithFields(log.Fields{
-				"error":      err.Error(),
-				"msg":        "dropped",
-				"chargeBody": string(msg.Body),
+				"error": err.Error(),
+				"msg":   "dropped",
+				"body":  string(msg.Body),
 			}).Error("consume from " + svc.conf.Yondu.Queue.SendConsent.Name)
 			goto ack
 		}
@@ -42,8 +43,20 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		t = e.EventData
 
 		//<-svc.api.ThrottleMT
+		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
+		if !ok {
+			m.Dropped.Inc()
+
+			err = fmt.Errorf("Unknown price to Yondu: %v", t.Price)
+			log.WithFields(log.Fields{
+				"error": err.Error(),
+				"msg":   "dropped",
+				"body":  string(msg.Body),
+			}).Error("wrong price")
+			goto ack
+		}
 		yResp, operatorErr = svc.api.SendConsent(t.Msisdn, amount)
-		logResponse("sentconsent", t, yResp, begin, operatorErr)
+		logRequests("sentconsent", t, yResp, begin, operatorErr)
 		if err := svc.publishTransactionLog("sent_consent", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,

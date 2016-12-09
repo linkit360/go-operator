@@ -31,9 +31,9 @@ func processMT(deliveries <-chan amqp.Delivery) {
 			m.Dropped.Inc()
 
 			log.WithFields(log.Fields{
-				"error":      err.Error(),
-				"msg":        "dropped",
-				"chargeBody": string(msg.Body),
+				"error": err.Error(),
+				"msg":   "dropped",
+				"body":  string(msg.Body),
 			}).Error("consume from " + svc.conf.Yondu.Queue.MT.Name)
 			goto ack
 		}
@@ -41,7 +41,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 
 		//<-svc.api.ThrottleMT
 		yResp, operatorErr = svc.api.MT(t.Msisdn, t.SMSText)
-		logResponse("mt", t, yResp, begin, operatorErr)
+		logRequests("mt", t, yResp, begin, operatorErr)
 		if err := svc.publishTransactionLog("sent_content", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,

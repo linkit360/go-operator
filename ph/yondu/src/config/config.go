@@ -38,6 +38,7 @@ type YonduConfig struct {
 	TransactionLog TransactionLogConfig `yaml:"transaction_log"`
 	ResponseCode   map[int]string       `yaml:"response_code"`
 	Queue          YonduQueuesConfig    `yaml:"queues"`
+	Tariffs        map[int]string       `yaml:"tariffs"`
 }
 type BasicAuth struct {
 	User string `yaml:"user"`

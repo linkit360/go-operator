@@ -194,6 +194,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		absentParameter("status_code", c)
 		return
 	}
+	logResponses("callback", p)
 	if err := svc.publishCallback(p); err != nil {
 		log.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
@@ -244,6 +245,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		absentParameter("message", c)
 		return
 	}
+	logResponses("mo", p)
 	if err := svc.publishMO(p); err != nil {
 		log.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),

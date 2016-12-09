@@ -17,7 +17,9 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		var t rec.Record
 		var operatorErr error
+		var err error
 		var amount string
+		var ok bool
 		var yResp YonduResponse
 		begin := time.Now()
 
@@ -41,8 +43,20 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		t = e.EventData
 
 		//<-svc.api.ThrottleMT
+		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
+		if !ok {
+			m.Dropped.Inc()
+
+			err = fmt.Errorf("Unknown price to Yondu: %v", t.Price)
+			log.WithFields(log.Fields{
+				"error":      err.Error(),
+				"msg":        "dropped",
+				"chargeBody": string(msg.Body),
+			}).Error("wrong price")
+			goto ack
+		}
 		yResp, operatorErr = svc.api.Charge(t.Msisdn, amount)
-		logResponse("charge", t, yResp, begin, operatorErr)
+		logRequests("charge", t, yResp, begin, operatorErr)
 		if err := svc.publishTransactionLog("sent_charge_request", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,

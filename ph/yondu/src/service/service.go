@@ -131,7 +131,7 @@ func InitService(
 		q.CallBack.Name,
 	)
 }
-func logResponse(reponseType string, t rec.Record, yResp YonduResponse, begin time.Time, err error) {
+func logRequests(requestType string, t rec.Record, yResp YonduResponse, begin time.Time, err error) {
 	fields := log.Fields{
 		"yonduResponse": fmt.Sprintf("%#v", yResp),
 		"rec":           fmt.Sprintf("%#v", t),
@@ -146,7 +146,13 @@ func logResponse(reponseType string, t rec.Record, yResp YonduResponse, begin ti
 	} else {
 		m.APIOutSuccess.Inc()
 	}
-	svc.api.responseLog.WithFields(fields).Println("y")
+	svc.api.requestLog.WithFields(fields).Println(requestType)
+}
+func logResponses(reponseType string, params interface{}) {
+	fields := log.Fields{
+		"params": fmt.Sprintf("%#v", params),
+	}
+	svc.api.responseLog.WithFields(fields).Println(reponseType)
 }
 
 func (svc *Service) publishCallback(data YonduResponse) error {

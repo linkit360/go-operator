@@ -56,7 +56,7 @@ func processVerifyTransCode(deliveries <-chan amqp.Delivery) {
 		}
 
 		yResp, operatorErr = svc.api.VerifyTransCode(t.Msisdn, code)
-		logResponse("verifytranscode", t, yResp, begin, operatorErr)
+		logRequests("verifytranscode", t, yResp, begin, operatorErr)
 		if err := svc.publishTransactionLog("sent_verify_transcode", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
