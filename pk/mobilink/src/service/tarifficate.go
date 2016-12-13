@@ -34,10 +34,10 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 			m.Dropped.Inc()
 
 			log.WithFields(log.Fields{
-				"error":       err.Error(),
-				"msg":         "dropped",
-				"contentSent": string(msg.Body),
-			}).Error("consume from " + svc.conf.queues.Requests)
+				"error":   err.Error(),
+				"msg":     "dropped",
+				"request": string(msg.Body),
+			}).Error("consume failed")
 			goto ack
 		}
 
@@ -70,14 +70,12 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 				m.Dropped.Inc()
 
 				log.WithFields(log.Fields{
-					"queue": svc.conf.queues.Requests,
 					"event": e.EventName,
 					"tid":   t.Tid,
 					"error": err.Error(),
 				}).Error("charge publish")
 			} else {
 				log.WithFields(log.Fields{
-					"queue": svc.conf.queues.Requests,
 					"event": e.EventName,
 					"tid":   t.Tid,
 					"paid":  t.Paid,

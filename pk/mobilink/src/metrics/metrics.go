@@ -22,7 +22,8 @@ var (
 	Empty               m.Gauge
 )
 
-func Init() {
+func Init(appName string) {
+	m.Init(appName)
 
 	SMPPConnected = m.PrometheusGauge("", "", "smpp_connected", "mobilink smppconnected")
 	SinceSuccessPaid = m.PrometheusGauge("", "", "since_success_paid", "mobilink since success paid")

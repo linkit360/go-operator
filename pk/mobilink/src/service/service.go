@@ -10,7 +10,6 @@ import (
 
 	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
 	"github.com/vostrok/operator/pk/mobilink/src/config"
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
 	"github.com/vostrok/utils/amqp"
 	queue_config "github.com/vostrok/utils/config"
 )
@@ -28,7 +27,7 @@ type Service struct {
 }
 type Config struct {
 	server   config.ServerConfig
-	queues   queue_config.OperatorQueueConfig
+	queues   config.QueueConfig
 	consumer amqp.ConsumerConfig
 	notifier amqp.NotifierConfig
 }
@@ -41,26 +40,24 @@ type Consumer struct {
 func InitService(
 	serverConfig config.ServerConfig,
 	mbConf mobilink_api.Config,
-	queuesConfig queue_config.OperatorQueueConfig,
+	qConfig config.QueueConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = Config{
 		server:   serverConfig,
-		queues:   queuesConfig,
+		queues:   qConfig,
 		consumer: consumerConfig,
 		notifier: notifierConfig,
 	}
-
-	m.Init()
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.api = mobilink_api.Init(mbConf.Rps, mbConf, svc.notifier)
 
 	// process consumer
 	svc.consumer = Consumer{
-		Requests:    amqp.NewConsumer(consumerConfig, queuesConfig.Requests),
-		SMSRequests: amqp.NewConsumer(consumerConfig, queuesConfig.SMSRequest),
+		Requests:    amqp.NewConsumer(consumerConfig, qConfig.Requests.Name, qConfig.Requests.PrefetchCount),
+		SMSRequests: amqp.NewConsumer(consumerConfig, qConfig.SMSRequests.Name, qConfig.SMSRequests.PrefetchCount),
 	}
 	if err := svc.consumer.Requests.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
@@ -74,9 +71,9 @@ func InitService(
 		svc.consumer.Requests,
 		svc.TarifficateChan,
 		processTarifficate,
-		serverConfig.ThreadsCount,
-		queuesConfig.Requests,
-		queuesConfig.Requests,
+		qConfig.Requests.ThreadsCount,
+		qConfig.Requests.Name,
+		qConfig.Requests.Name,
 	)
 
 	// queue for sms requests
@@ -84,9 +81,9 @@ func InitService(
 		svc.consumer.SMSRequests,
 		svc.SMSChan,
 		processSMS,
-		serverConfig.ThreadsCount,
-		queuesConfig.SMSRequest,
-		queuesConfig.SMSRequest,
+		qConfig.SMSRequests.ThreadsCount,
+		qConfig.SMSRequests.Name,
+		qConfig.SMSRequests.Name,
 	)
 
 }
@@ -100,7 +97,7 @@ func (svc *Service) publishResponse(eventName string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.queues.Responses, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue_config.ResponsesQueue("mobilink"), 0, body})
 	return nil
 }
 
@@ -113,6 +110,6 @@ func (svc *Service) publishSMSResponse(eventName string, data interface{}) error
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.queues.SMSResponse, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue_config.SMSResponsesQueue("mobilink"), 0, body})
 	return nil
 }

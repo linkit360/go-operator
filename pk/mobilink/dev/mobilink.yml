@@ -2,11 +2,20 @@ name: mumbai_mobilink
 
 server:
   port: 50306
-  threads_count: 1
   operator_name: mobilink
 
+queues:
+  requests:
+    name: mobilink_requests
+    prefetch_count: 50
+    threads_count: 10
+
+  sms_requests:
+    name: mobilink_sms_requests
+    prefetch_count: 50
+    threads_count: 10
+
 consumer:
-  queue_prefetch_count: 4
   reconnect_delay: 10
   conn:
     user: linkit

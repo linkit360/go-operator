@@ -27,8 +27,8 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 			log.WithFields(log.Fields{
 				"error":       err.Error(),
 				"msg":         "dropped",
-				"contentSent": string(msg.Body),
-			}).Error("consume from " + svc.conf.queues.SMSRequest)
+				"sms_request": string(msg.Body),
+			}).Error("consume failed")
 			goto ack
 		}
 
@@ -47,14 +47,12 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 
 			if err := svc.publishSMSResponse("sms_response", t); err != nil {
 				log.WithFields(log.Fields{
-					"queue": svc.conf.queues.SMSRequest,
 					"event": e.EventName,
 					"tid":   t.Tid,
 					"error": err.Error(),
 				}).Error("send sms error")
 			} else {
 				log.WithFields(log.Fields{
-					"queue": svc.conf.queues.SMSRequest,
 					"event": e.EventName,
 					"tid":   t.Tid,
 				}).Info("processed successfully")

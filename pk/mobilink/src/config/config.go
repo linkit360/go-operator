@@ -18,13 +18,19 @@ type ServerConfig struct {
 	OperatorName string `yaml:"operator_name"`
 	ThreadsCount int    `default:"1" yaml:"threads_count"`
 }
+
+type QueueConfig struct {
+	Requests    config.ConsumeQueueConfig `yaml:"requests"`
+	SMSRequests config.ConsumeQueueConfig `yaml:"sms_requests"`
+}
+
 type AppConfig struct {
-	Name      string                     `yaml:"name"`
-	Server    ServerConfig               `yaml:"server"`
-	Consumer  amqp.ConsumerConfig        `yaml:"consumer"`
-	Publisher amqp.NotifierConfig        `yaml:"publisher"`
-	Mobilink  mobilink_api.Config        `yaml:"mobilink"`
-	Queues    config.OperatorQueueConfig `yaml:"-"`
+	Name      string              `yaml:"name"`
+	Server    ServerConfig        `yaml:"server"`
+	Queues    QueueConfig         `yaml:"queues"`
+	Consumer  amqp.ConsumerConfig `yaml:"consumer"`
+	Publisher amqp.NotifierConfig `yaml:"publisher"`
+	Mobilink  mobilink_api.Config `yaml:"mobilink"`
 }
 
 func LoadConfig() AppConfig {
@@ -44,11 +50,6 @@ func LoadConfig() AppConfig {
 	if strings.Contains(appConfig.Name, "-") {
 		log.Fatal("app name must be without '-' : it's not a valid metric name")
 	}
-
-	operator := envString("OPERATOR", "mobilink")
-	operators := make(map[string]config.OperatorConfig, 1)
-	operators[operator] = config.OperatorConfig{}
-	appConfig.Queues = config.GetOperatorsQueue(operators)[operator]
 
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)
 	appConfig.Consumer.Conn.Host = envString("RBMQ_HOST", appConfig.Consumer.Conn.Host)
