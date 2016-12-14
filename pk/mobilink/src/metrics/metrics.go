@@ -9,18 +9,24 @@ import (
 )
 
 var (
-	SMPPConnected       prometheus.Gauge
-	SinceSuccessPaid    prometheus.Gauge
-	SmsSuccess          m.Gauge
-	SmsError            m.Gauge
-	BalanceCheckErrors  m.Gauge
-	BalanceCheckSuccess m.Gauge
-	ChargeSuccess       m.Gauge
-	ChargeErrors        m.Gauge
-	Errors              m.Gauge
-	Dropped             m.Gauge
-	Empty               m.Gauge
+	SMPPConnected        prometheus.Gauge
+	SinceSuccessPaid     prometheus.Gauge
+	SmsSuccess           m.Gauge
+	SmsError             m.Gauge
+	BalanceCheckErrors   m.Gauge
+	BalanceCheckSuccess  m.Gauge
+	ChargeSuccess        m.Gauge
+	ChargeErrors         m.Gauge
+	Errors               m.Gauge
+	Dropped              m.Gauge
+	Empty                m.Gauge
+	BalanceCheckDuration prometheus.Summary
+	ChargeDuration       prometheus.Summary
 )
+
+func newDuration(name string) prometheus.Summary {
+	return m.NewSummary(name+"_duration_seconds", name)
+}
 
 func Init(appName string) {
 	m.Init(appName)
@@ -36,6 +42,8 @@ func Init(appName string) {
 	Errors = m.NewGauge("", "", "errors", "errors")
 	Dropped = m.NewGauge("", "", "dropped", "mobilink queue dropped")
 	Empty = m.NewGauge("", "", "empty", "mobilink queue empty")
+	BalanceCheckDuration = newDuration("balance_check")
+	ChargeDuration = newDuration("charge_check")
 
 	go func() {
 		for range time.Tick(time.Second) {

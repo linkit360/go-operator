@@ -99,8 +99,10 @@ func (mb *Mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 	resp, err := mb.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("client.Do: %s", err.Error())
+		m.BalanceCheckDuration.Observe(time.Since(begin).Seconds())
 		return false, err
 	}
+	m.BalanceCheckDuration.Observe(time.Since(begin).Seconds())
 
 	mobilinkResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -255,9 +257,11 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 			"msisdn": msisdn,
 			"time":   now,
 		}).Error("do request to mobilink")
-
+		m.ChargeDuration.Observe(time.Since(begin).Seconds())
 		return nil
 	}
+	m.ChargeDuration.Observe(time.Since(begin).Seconds())
+
 	responseCode = resp.StatusCode
 	mobilinkResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
