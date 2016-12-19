@@ -219,7 +219,7 @@ type MOParameters struct {
 	Msisdn    string `json:"msisdn"`
 	TransID   string `json:"transid"`
 	Timestamp string `json:"timestamp"`
-	Message   string `json:"message"`
+	KeyWord   string `json:"message"`
 }
 
 func (y *Yondu) MO(c *gin.Context) {
@@ -240,7 +240,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		absentParameter("timestamp", c)
 		return
 	}
-	p.Message, ok = c.GetQuery("message")
+	p.KeyWord, ok = c.GetQuery("message")
 	if !ok {
 		absentParameter("message", c)
 		return

@@ -26,8 +26,7 @@ type Mobilink struct {
 type Config struct {
 	Rps            int                  `default:"10" yaml:"rps"`
 	Enabled        bool                 `default:"true" yaml:"enabled"`
-	SaveRetries    bool                 `default:"true" yaml:"save_retries"`
-	MTChanCapacity int                  `default:"1000" yaml:"channel_camacity"`
+	MTChanCapacity int                  `default:"1000" yaml:"channel_capacity"`
 	Location       string               `default:"Asia/Karachi" yaml:"location"`
 	TransactionLog TransactionLogConfig `yaml:"log_transaction"`
 	Connection     ConnnectionConfig    `yaml:"connection"`
@@ -79,7 +78,7 @@ func Init(
 
 	mb.notifier = notifier
 
-	mb.ThrottleMT = time.Tick(time.Second / time.Duration(mobilinkConf.Rps))
+	mb.ThrottleMT = time.Tick(time.Second / time.Duration(mobilinkConf.Rps+1))
 	mb.requestLog = logger.GetFileLogger(mobilinkConf.TransactionLog.RequestLogPath)
 	log.Info("request logger init done")
 

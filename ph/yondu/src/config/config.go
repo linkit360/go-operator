@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
+	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
 	"github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/db"
@@ -23,12 +24,13 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	Name      string              `yaml:"name"`
-	Server    ServerConfig        `yaml:"server"`
-	DB        db.DataBaseConfig   `yaml:"db"`
-	Consumer  amqp.ConsumerConfig `yaml:"consumer"`
-	Publisher amqp.NotifierConfig `yaml:"publisher"`
-	Yondo     YonduConfig         `yaml:"yondu"`
+	Name      string                       `yaml:"name"`
+	Server    ServerConfig                 `yaml:"server"`
+	DB        db.DataBaseConfig            `yaml:"db"`
+	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
+	Publisher amqp.NotifierConfig          `yaml:"publisher"`
+	Yondo     YonduConfig                  `yaml:"yondu"`
+	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
 }
 
 type YonduConfig struct {

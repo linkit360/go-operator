@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
+	inmem_client "github.com/vostrok/inmem/rpcclient"
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	"github.com/vostrok/utils/rec"
 )
@@ -37,9 +38,21 @@ func processMO(deliveries <-chan amqp.Delivery) {
 			}).Error("consume from " + svc.conf.Yondu.Queue.MO.Name)
 			goto ack
 		}
-		// prepare rec. record
-		//yondyResponse := e.EventData
-		t := rec.Record{}
+
+		t, err := getRecordByMO(e.EventData)
+		if err != nil {
+		nackGet:
+			if err := msg.Nack(false, true); err != nil {
+				log.WithFields(log.Fields{
+					"mo":    msg.Body,
+					"error": err.Error(),
+				}).Error("cannot nack")
+				time.Sleep(time.Second)
+				goto nackGet
+			}
+			continue
+		}
+
 		if err := svc.publishTransactionLog("mo", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
@@ -74,4 +87,63 @@ func processMO(deliveries <-chan amqp.Delivery) {
 		}
 
 	}
+}
+
+func getRecordByMO(req MOParameters) (rec.Record, error) {
+	r := rec.Record{}
+	campaign, err := inmem_client.GetCampaignByKeyWord(req.KeyWord)
+	if err != nil {
+		m.MOCallUnknownCampaign.Inc()
+
+		err = fmt.Errorf("inmem_client.GetCampaignByKeyWord: %s", err.Error())
+		log.WithFields(log.Fields{
+			"keyword": req.KeyWord,
+			"error":   err.Error(),
+		}).Error("cannot get campaign by keyword")
+		return r, err
+	}
+	svc, err := inmem_client.GetServiceById(campaign.ServiceId)
+	if err != nil {
+		m.MOCallUnknownService.Inc()
+
+		err = fmt.Errorf("inmem_client.GetServiceById: %s", err.Error())
+		log.WithFields(log.Fields{
+			"keyword":    req.KeyWord,
+			"serviceId":  campaign.ServiceId,
+			"campaignId": campaign.Id,
+			"error":      err.Error(),
+		}).Error("cannot get service by id")
+		return r, err
+	}
+	publisher := ""
+	pixelSetting, err := inmem_client.GetPixelSettingByCampaignId(campaign.Id)
+	if err != nil {
+		m.MOCallUnknownPublisher.Inc()
+
+		err = fmt.Errorf("inmem_client.GetPixelSettingByCampaignId: %s", err.Error())
+		log.WithFields(log.Fields{
+			"keyword":    req.KeyWord,
+			"serviceId":  campaign.ServiceId,
+			"campaignId": campaign.Id,
+			"error":      err.Error(),
+		}).Error("cannot get pixel setting by campaign id")
+	} else {
+		publisher = pixelSetting.Publisher
+	}
+	r = rec.Record{
+		Msisdn:             req.Msisdn,
+		Tid:                rec.GenerateTID(),
+		SubscriptionStatus: "",
+		CountryCode:        "ph",
+		OperatorCode:       "51000",
+		Publisher:          publisher,
+		Pixel:              "",
+		CampaignId:         campaign.Id,
+		ServiceId:          campaign.ServiceId,
+		DelayHours:         svc.DelayHours,
+		PaidHours:          svc.PaidHours,
+		KeepDays:           svc.KeepDays,
+		Price:              100 * int(svc.Price),
+	}
+	return r, nil
 }

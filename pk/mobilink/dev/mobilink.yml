@@ -33,8 +33,8 @@ publisher:
     port: 5672
 
 mobilink:
+  rps: 15
   enabled: true
-  save_retries: true
   log_transaction:
     queue: transaction_log
     response: /var/log/linkit/response_mobilink.log
@@ -42,7 +42,7 @@ mobilink:
   location: Asia/Karachi
   connection:
     mt:
-      url: http://localhost:50306/mobilink/failed
+      url: http://localhost:50306/mobilink/paid
       headers:
         Content-Type: text/xml
         Authorization: Basic SU5UTE5LVVI6TGluayMwMTAx

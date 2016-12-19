@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
+	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/ph/yondu/src/config"
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	"github.com/vostrok/utils/amqp"
@@ -49,6 +50,7 @@ func InitService(
 	yConf config.YonduConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
+	inMemConfig inmem_client.RPCClientConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{
@@ -59,6 +61,10 @@ func InitService(
 	}
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.api = initYondu(yConf)
+
+	if err := inmem_client.Init(inMemConfig); err != nil {
+		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	}
 
 	// process consumer
 	q := svc.conf.Yondu.Queue

@@ -9,15 +9,18 @@ import (
 )
 
 var (
-	Success        m.Gauge
-	Errors         m.Gauge
-	WrongParameter m.Gauge
-	APIOutErrors   m.Gauge
-	APIOutSuccess  m.Gauge
-	APIInErrors    m.Gauge
-	APIINSuccess   m.Gauge
-	Dropped        m.Gauge
-	Empty          m.Gauge
+	Success                m.Gauge
+	Errors                 m.Gauge
+	WrongParameter         m.Gauge
+	MOCallUnknownCampaign  m.Gauge
+	MOCallUnknownService   m.Gauge
+	MOCallUnknownPublisher m.Gauge
+	APIOutErrors           m.Gauge
+	APIOutSuccess          m.Gauge
+	APIInErrors            m.Gauge
+	APIINSuccess           m.Gauge
+	Dropped                m.Gauge
+	Empty                  m.Gauge
 )
 
 func Init(appName string) {
@@ -32,6 +35,9 @@ func Init(appName string) {
 	APIInErrors = m.NewGauge("", "api_in", "errors", "yondu api out errors")
 	APIINSuccess = m.NewGauge("", "api_in", "", "yondu api out success")
 
+	MOCallUnknownCampaign = m.NewGauge("", "api_in", "mo_call_unknown_campaign", "MO unknown campaign")
+	MOCallUnknownService = m.NewGauge("", "api_in", "mo_call_unknown_service", "MO unknown service")
+	MOCallUnknownPublisher = m.NewGauge("", "api_in", "mo_call_unknown_pixel_setting", "MO unknown pixel setting")
 	go func() {
 		for range time.Tick(time.Minute) {
 			Success.Update()
@@ -43,6 +49,9 @@ func Init(appName string) {
 			APIOutSuccess.Update()
 			APIInErrors.Update()
 			APIINSuccess.Update()
+			MOCallUnknownCampaign.Update()
+			MOCallUnknownService.Update()
+			MOCallUnknownPublisher.Update()
 		}
 	}()
 }
