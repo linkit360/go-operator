@@ -13,6 +13,11 @@ import (
 	"github.com/vostrok/utils/rec"
 )
 
+type EventNotifyResponse struct {
+	EventName string        `json:"event_name,omitempty"`
+	EventData YonduResponse `json:"event_data,omitempty"`
+}
+
 func processCharge(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
 		var t rec.Record

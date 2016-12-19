@@ -1,11 +1,12 @@
-name: mumbai_yondo
+name: mumbai_yondu
 
 server:
   port: 50306
   threads_count: 1
   operator_name: yondo
 
-yondo:
+yondu:
+  name: yondu
   timeout: 40
   api_url: http://localhost:50306/yondu
   location: Asia/Karachi
@@ -29,16 +30,12 @@ yondo:
       name: send_consent
       prefetch_count:
       threads_count:
-    verify_trans_code:
-      name: verify_trans_code
-      prefetch_count: 50
-      threads_count: 10
     yondu_charge:
       name: yondu_requests
       prefetch_count: 50
       threads_count: 10
     yondu_mt:
-      name: yondu_sms_requests
+      name: yondu_mt
       prefetch_count: 50
       threads_count: 10
     callback:
@@ -46,7 +43,7 @@ yondo:
       prefetch_count: 50
       threads_count: 10
     mo:
-      name: yondu_sms_responses
+      name: yondu_mo
       prefetch_count: 50
       threads_count: 10
     tariffs:

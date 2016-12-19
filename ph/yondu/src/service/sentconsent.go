@@ -42,7 +42,6 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 
 		t = e.EventData
 
-		//<-svc.api.ThrottleMT
 		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
 		if !ok {
 			m.Dropped.Inc()

@@ -13,6 +13,7 @@ import (
 	"github.com/vostrok/operator/ph/yondu/src/config"
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	"github.com/vostrok/utils/amqp"
+	queue_config "github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/rec"
 )
 
@@ -28,7 +29,6 @@ type Service struct {
 	VerifyTransCodeCh <-chan amqp_driver.Delivery
 	ChargeCh          <-chan amqp_driver.Delivery
 	MTCh              <-chan amqp_driver.Delivery
-	MOCh              <-chan amqp_driver.Delivery
 	CallBackCh        <-chan amqp_driver.Delivery
 	consumer          Consumers
 	notifier          *amqp.Notifier
@@ -37,12 +37,10 @@ type Service struct {
 }
 
 type Consumers struct {
-	SendConsent     *amqp.Consumer
-	VerifyTransCode *amqp.Consumer
-	Charge          *amqp.Consumer
-	MT              *amqp.Consumer
-	MO              *amqp.Consumer
-	CallBack        *amqp.Consumer
+	SendConsent *amqp.Consumer
+	Charge      *amqp.Consumer
+	MT          *amqp.Consumer
+	CallBack    *amqp.Consumer
 }
 
 func InitService(
@@ -69,17 +67,15 @@ func InitService(
 	// process consumer
 	q := svc.conf.Yondu.Queue
 	svc.consumer = Consumers{
-		SendConsent:     amqp.NewConsumer(consumerConfig, q.SendConsent.Name, q.SendConsent.PrefetchCount),
-		VerifyTransCode: amqp.NewConsumer(consumerConfig, q.VerifyTransCode.Name, q.VerifyTransCode.PrefetchCount),
-		Charge:          amqp.NewConsumer(consumerConfig, q.Charge.Name, q.Charge.PrefetchCount),
-		MT:              amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
-		MO:              amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
-		CallBack:        amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
+		SendConsent: amqp.NewConsumer(consumerConfig, q.SendConsent.Name, q.SendConsent.PrefetchCount),
+		Charge:      amqp.NewConsumer(consumerConfig, q.Charge.Name, q.Charge.PrefetchCount),
+		MT:          amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
+		CallBack:    amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
 	}
 	if err := svc.consumer.SendConsent.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
 	}
-	if err := svc.consumer.VerifyTransCode.Connect(); err != nil {
+	if err := svc.consumer.CallBack.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
 	}
 	if err := svc.consumer.Charge.Connect(); err != nil {
@@ -97,14 +93,6 @@ func InitService(
 		q.SendConsent.Name,
 	)
 	amqp.InitQueue(
-		svc.consumer.VerifyTransCode,
-		svc.VerifyTransCodeCh,
-		processVerifyTransCode,
-		q.VerifyTransCode.ThreadsCount,
-		q.VerifyTransCode.Name,
-		q.VerifyTransCode.Name,
-	)
-	amqp.InitQueue(
 		svc.consumer.Charge,
 		svc.ChargeCh,
 		processCharge,
@@ -119,14 +107,6 @@ func InitService(
 		q.SendConsent.ThreadsCount,
 		q.SendConsent.Name,
 		q.SendConsent.Name,
-	)
-	amqp.InitQueue(
-		svc.consumer.MO,
-		svc.MOCh,
-		processMO,
-		q.MO.ThreadsCount,
-		q.MO.Name,
-		q.MO.Name,
 	)
 	amqp.InitQueue(
 		svc.consumer.CallBack,
@@ -200,5 +180,20 @@ func (svc *Service) publishTransactionLog(eventName string, r rec.Record) error 
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.TransactionLog, 0, body})
+	return nil
+}
+
+func (svc *Service) newSubscriptionNotify(msg rec.Record) error {
+	msg.SentAt = time.Now().UTC()
+	event := EventNotify{
+		EventName: "new_subscription",
+		EventData: msg,
+	}
+	body, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %s", err.Error())
+	}
+	queue := queue_config.NewSubscriptionQueueName(svc.conf.Yondu.Name)
+	svc.notifier.Publish(amqp.AMQPMessage{queue, uint8(1), body})
 	return nil
 }

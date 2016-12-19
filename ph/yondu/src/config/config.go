@@ -34,6 +34,7 @@ type AppConfig struct {
 }
 
 type YonduConfig struct {
+	Name           string               `yaml:"name"`
 	Auth           BasicAuth            `yaml:"auth"`
 	Timeout        int                  `default:"30" yaml:"timeout"`
 	APIUrl         string               `default:"http://localhost:50306/" yaml:"api_url"`
@@ -51,13 +52,12 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/yondu/request.log" yaml:"request"`
 }
 type YonduQueuesConfig struct {
-	SendConsent     config.ConsumeQueueConfig `yaml:"send_consent"`
-	VerifyTransCode config.ConsumeQueueConfig `yaml:"verify_trans_code"`
-	Charge          config.ConsumeQueueConfig `yaml:"yondu_charge"` // name yondu_requests
-	MT              config.ConsumeQueueConfig `yaml:"yondu_mt"`
-	CallBack        config.ConsumeQueueConfig `yaml:"callback"` //  "yondu_responses"`
-	MO              config.ConsumeQueueConfig `yaml:"mo"`       // "yondu_sms_responses"
-	TransactionLog  string                    `yaml:"transaction_log" default:"transaction_log"`
+	SendConsent    config.ConsumeQueueConfig `yaml:"send_consent"`
+	Charge         config.ConsumeQueueConfig `yaml:"yondu_charge"` // name yondu_requests
+	MT             config.ConsumeQueueConfig `yaml:"yondu_mt"`
+	CallBack       config.ConsumeQueueConfig `yaml:"callback"` //  "yondu_responses"`
+	MO             config.ConsumeQueueConfig `yaml:"mo"`       // "yondu_sms_responses"
+	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
 }
 
 func LoadConfig() AppConfig {

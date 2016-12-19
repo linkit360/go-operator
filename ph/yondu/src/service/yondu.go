@@ -41,8 +41,8 @@ func basicAuth(username, password string) string {
 
 type YonduResponse struct {
 	Response struct {
-		Message string `json:"message"`
-		Code    int    `json:"code"`
+		Message string `json:"message,omitempty"`
+		Code    int    `json:"code,omitempty"`
 	} `json:"response"`
 	ResponseTime time.Time `json:"response_time"`
 }
@@ -56,17 +56,6 @@ type YonduResponse struct {
 //Sample Request: {URL}/m360api/v1/consent/9171234567/P1
 func (y *Yondu) SendConsent(msisdn, amount string) (YonduResponse, error) {
 	return y.call(y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
-}
-
-//API URL: {URL}/m360api/v1/verify/{msisdn}/{code}
-//Description: To verify transaction code sent to subscriber if input is not through SMS
-//Method: GET
-//Headers: Authorization: Bearer {token}
-//Required parameters: msisdn, code
-//Sample Response: {"response":{"message":"verification successful","code":"2003"}}
-// Sample Request: {URL}/m360api/v1/verify/9171234567/123456
-func (y *Yondu) VerifyTransCode(msisdn string, code int) (YonduResponse, error) {
-	return y.call(y.conf.APIUrl+"/verify/"+msisdn+"/"+strconv.Itoa(code), 2003)
 }
 
 //API URL: {URL}/m360api/v1/charging/{msisdn}/{amount}
@@ -257,6 +246,7 @@ func (y *Yondu) MO(c *gin.Context) {
 			"transId": p.TransID,
 		}).Info("sent")
 	}
+
 }
 
 func absentParameter(name string, c *gin.Context) {
