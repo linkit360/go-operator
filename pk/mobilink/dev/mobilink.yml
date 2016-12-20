@@ -1,4 +1,5 @@
-name: mumbai_mobilink
+metric_instance_prefix: pk_mobilink1
+app_name: telco
 
 server:
   port: 50306

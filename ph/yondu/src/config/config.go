@@ -24,13 +24,14 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	Name      string                       `yaml:"name"`
-	Server    ServerConfig                 `yaml:"server"`
-	DB        db.DataBaseConfig            `yaml:"db"`
-	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
-	Publisher amqp.NotifierConfig          `yaml:"publisher"`
-	Yondo     YonduConfig                  `yaml:"yondu"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
+	MetricInstancePrefix string                       `yaml:"metric_instance_prefix"`
+	AppName              string                       `yaml:"app_name"`
+	Server               ServerConfig                 `yaml:"server"`
+	DB                   db.DataBaseConfig            `yaml:"db"`
+	Consumer             amqp.ConsumerConfig          `yaml:"consumer"`
+	Publisher            amqp.NotifierConfig          `yaml:"publisher"`
+	Yondo                YonduConfig                  `yaml:"yondu"`
+	InMem                inmem_client.RPCClientConfig `yaml:"inmem"`
 }
 
 type YonduConfig struct {
@@ -71,11 +72,17 @@ func LoadConfig() AppConfig {
 		}
 	}
 
-	if appConfig.Name == "" {
-		log.Fatal("app name must be defiled as <host>_<name>")
+	if appConfig.AppName == "" {
+		log.Fatal("app_name must be defiled as <host>_<name>")
 	}
-	if strings.Contains(appConfig.Name, "-") {
-		log.Fatal("app name must be without '-' : it's not a valid metric name")
+	if strings.Contains(appConfig.AppName, "-") {
+		log.Fatal("app_name must be without '-' : it's not a valid metric name")
+	}
+	if appConfig.MetricInstancePrefix == "" {
+		log.Fatal("metric_instance_prefix be defiled as <host>_<name>")
+	}
+	if strings.Contains(appConfig.MetricInstancePrefix, "-") {
+		log.Fatal("metric_instance_prefix be without '-' : it's not a valid metric name")
 	}
 
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)

@@ -25,12 +25,13 @@ type QueueConfig struct {
 }
 
 type AppConfig struct {
-	Name      string              `yaml:"name"`
-	Server    ServerConfig        `yaml:"server"`
-	Queues    QueueConfig         `yaml:"queues"`
-	Consumer  amqp.ConsumerConfig `yaml:"consumer"`
-	Publisher amqp.NotifierConfig `yaml:"publisher"`
-	Mobilink  mobilink_api.Config `yaml:"mobilink"`
+	MetricInstancePrefix string              `yaml:"metric_instance_prefix"`
+	AppName              string              `yaml:"app_name"`
+	Server               ServerConfig        `yaml:"server"`
+	Queues               QueueConfig         `yaml:"queues"`
+	Consumer             amqp.ConsumerConfig `yaml:"consumer"`
+	Publisher            amqp.NotifierConfig `yaml:"publisher"`
+	Mobilink             mobilink_api.Config `yaml:"mobilink"`
 }
 
 func LoadConfig() AppConfig {
@@ -44,11 +45,17 @@ func LoadConfig() AppConfig {
 		}
 	}
 
-	if appConfig.Name == "" {
+	if appConfig.AppName == "" {
 		log.Fatal("app name must be defiled as <host>_<name>")
 	}
-	if strings.Contains(appConfig.Name, "-") {
+	if strings.Contains(appConfig.AppName, "-") {
 		log.Fatal("app name must be without '-' : it's not a valid metric name")
+	}
+	if appConfig.MetricInstancePrefix == "" {
+		log.Fatal("metric_instance_prefix be defiled as <host>_<name>")
+	}
+	if strings.Contains(appConfig.MetricInstancePrefix, "-") {
+		log.Fatal("metric_instance_prefix be without '-' : it's not a valid metric name")
 	}
 
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)

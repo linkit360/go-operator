@@ -141,8 +141,9 @@ func logResponses(reponseType string, params interface{}) {
 	svc.api.responseLog.WithFields(fields).Println(reponseType)
 }
 
-func (svc *Service) publishCallback(data YonduResponse) error {
-	data.Response = time.Now().UTC()
+func (svc *Service) publishCallback(data CallbackParameters) error {
+	//data.ResponseTime = time.Now().UTC()
+
 	event := amqp.EventNotify{
 		EventName: "callback",
 		EventData: data,
@@ -155,8 +156,8 @@ func (svc *Service) publishCallback(data YonduResponse) error {
 	return nil
 }
 
-func (svc *Service) publishMO(data YonduResponse) error {
-	data.Response = time.Now().UTC()
+func (svc *Service) publishMO(data MOParameters) error {
+	//data.ResponseTime = time.Now().UTC()
 	event := amqp.EventNotify{
 		EventName: "mo",
 		EventData: data,

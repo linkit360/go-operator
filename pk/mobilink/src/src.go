@@ -16,7 +16,7 @@ import (
 
 func RunServer() {
 	appConfig := config.LoadConfig()
-	m.Init(appConfig.Name)
+	m.Init(appConfig.AppName)
 
 	service.InitService(
 		appConfig.Server,

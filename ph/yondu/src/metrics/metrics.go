@@ -21,29 +21,27 @@ var (
 )
 
 func Init(appName string) {
-	m.Init(appName)
 
 	Success = m.NewGauge("", "", "success", "success")
 	Errors = m.NewGauge("", "", "errors", "errors")
-	Dropped = m.NewGauge("", "", "dropped", "yondu queue dropped")
-	Empty = m.NewGauge("", "", "empty", "yondu queue empty")
-	APIOutErrors = m.NewGauge("", "api_out", "errors", "yondu api out errors")
-	APIOutSuccess = m.NewGauge("", "api_out", "", "yondu api out success")
-	APIInErrors = m.NewGauge("", "api_in", "errors", "yondu api out errors")
-	APIINSuccess = m.NewGauge("", "api_in", "", "yondu api out success")
+	Dropped = m.NewGauge("", appName, "dropped", "yondu queue dropped")
+	Empty = m.NewGauge("", appName, "empty", "yondu queue empty")
+	APIOutErrors = m.NewGauge("", appName, "api_out_errors", "yondu api out errors")
+	APIOutSuccess = m.NewGauge("", appName, "api_out_success", "yondu api out success")
+	APIInErrors = m.NewGauge("", appName, "api_in_errors", "yondu api in errors")
+	APIINSuccess = m.NewGauge("", appName, "api_in_success", "yondu api in success")
 
 	go func() {
 		for range time.Tick(time.Minute) {
-			Success.Update()
-			Errors.Update()
-			WrongParameter.Update()
-			Dropped.Update()
-			Empty.Update()
-			APIOutErrors.Update()
-			APIOutSuccess.Update()
-			APIInErrors.Update()
-			APIINSuccess.Update()
-
+			//Success.Update()
+			//Errors.Update()
+			//WrongParameter.Update()
+			//Dropped.Update()
+			//Empty.Update()
+			//APIOutErrors.Update()
+			//APIOutSuccess.Update()
+			//APIInErrors.Update()
+			//APIINSuccess.Update()
 		}
 	}()
 }

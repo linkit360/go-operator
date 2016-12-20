@@ -6,15 +6,17 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	//yondo "github.com/vostrok/operator/pk/yondo/src/api"
 	"github.com/vostrok/operator/ph/yondu/src/config"
+	"github.com/vostrok/operator/ph/yondu/src/metrics"
 	"github.com/vostrok/operator/ph/yondu/src/service"
 	m "github.com/vostrok/utils/metrics"
 )
 
 func RunServer() {
 	appConfig := config.LoadConfig()
-	m.Init(appConfig.Name)
+	m.Init(appConfig.MetricInstancePrefix)
+	metrics.Init(appConfig.AppName)
+
 	service.InitService(
 		appConfig.Server,
 		appConfig.Yondo,

@@ -3,7 +3,6 @@ package service
 // only sends to yondu, async
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -15,6 +14,7 @@ import (
 
 func processCallBack(deliveries <-chan amqp.Delivery) {
 	for msg := range deliveries {
+		t := rec.Record{}
 
 		log.WithFields(log.Fields{
 			"priority": msg.Priority,
@@ -22,6 +22,7 @@ func processCallBack(deliveries <-chan amqp.Delivery) {
 		}).Debug("start process")
 
 		var e EventNotifyResponse
+
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
 
@@ -37,7 +38,6 @@ func processCallBack(deliveries <-chan amqp.Delivery) {
 		// parse callback response
 		// notify in yondu_responses
 
-		t := rec.Record{}
 		if err := svc.publishTransactionLog("callback", t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,

@@ -1,4 +1,6 @@
-name: mumbai_yondu
+metric_instance_prefix: ph_yondu1
+app_name: telco
+
 
 server:
   port: 50306
@@ -27,7 +29,7 @@ yondu:
   queues:
     transaction_log: transaction_log
     send_consent:
-      name: send_consent
+      name: yondu_send_consent
       prefetch_count:
       threads_count:
     yondu_charge:
