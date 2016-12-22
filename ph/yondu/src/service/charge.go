@@ -10,7 +10,6 @@ import (
 	"github.com/streadway/amqp"
 
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/rec"
 )
 
