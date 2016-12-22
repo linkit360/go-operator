@@ -12,6 +12,7 @@ import (
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/ph/yondu/src/config"
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
+	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	queue_config "github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/rec"
@@ -29,7 +30,6 @@ type Service struct {
 	VerifyTransCodeCh <-chan amqp_driver.Delivery
 	ChargeCh          <-chan amqp_driver.Delivery
 	MTCh              <-chan amqp_driver.Delivery
-	CallBackCh        <-chan amqp_driver.Delivery
 	consumer          Consumers
 	notifier          *amqp.Notifier
 	db                *sql.DB
@@ -40,7 +40,6 @@ type Consumers struct {
 	SendConsent *amqp.Consumer
 	Charge      *amqp.Consumer
 	MT          *amqp.Consumer
-	CallBack    *amqp.Consumer
 }
 
 func InitService(
@@ -70,12 +69,8 @@ func InitService(
 		SendConsent: amqp.NewConsumer(consumerConfig, q.SendConsent.Name, q.SendConsent.PrefetchCount),
 		Charge:      amqp.NewConsumer(consumerConfig, q.Charge.Name, q.Charge.PrefetchCount),
 		MT:          amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
-		CallBack:    amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
 	}
 	if err := svc.consumer.SendConsent.Connect(); err != nil {
-		log.Fatal("rbmq consumer connect:", err.Error())
-	}
-	if err := svc.consumer.CallBack.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
 	}
 	if err := svc.consumer.Charge.Connect(); err != nil {
@@ -108,14 +103,6 @@ func InitService(
 		q.SendConsent.Name,
 		q.SendConsent.Name,
 	)
-	amqp.InitQueue(
-		svc.consumer.CallBack,
-		svc.CallBackCh,
-		processCallBack,
-		q.CallBack.ThreadsCount,
-		q.CallBack.Name,
-		q.CallBack.Name,
-	)
 }
 func logRequests(requestType string, t rec.Record, yResp YonduResponse, begin time.Time, err error) {
 	fields := log.Fields{
@@ -142,8 +129,6 @@ func logResponses(reponseType string, params interface{}) {
 }
 
 func (svc *Service) publishCallback(data CallbackParameters) error {
-	//data.ResponseTime = time.Now().UTC()
-
 	event := amqp.EventNotify{
 		EventName: "callback",
 		EventData: data,
@@ -157,7 +142,6 @@ func (svc *Service) publishCallback(data CallbackParameters) error {
 }
 
 func (svc *Service) publishMO(data MOParameters) error {
-	//data.ResponseTime = time.Now().UTC()
 	event := amqp.EventNotify{
 		EventName: "mo",
 		EventData: data,
@@ -170,11 +154,29 @@ func (svc *Service) publishMO(data MOParameters) error {
 	return nil
 }
 
-func (svc *Service) publishTransactionLog(eventName string, r rec.Record) error {
-	r.SentAt = time.Now().UTC()
+func (svc *Service) publishTransactionLog(eventName string, yr YonduResponse, t rec.Record) error {
+	tl := transaction_log_service.OperatorTransactionLog{
+		Tid:              t.Tid,
+		Msisdn:           t.Msisdn,
+		OperatorToken:    t.OperatorToken,
+		OperatorCode:     t.OperatorCode,
+		CountryCode:      t.CountryCode,
+		Error:            "",
+		Price:            t.Price,
+		ServiceId:        t.ServiceId,
+		SubscriptionId:   t.SubscriptionId,
+		CampaignId:       t.CampaignId,
+		RequestBody:      yr.Request,
+		ResponseBody:     fmt.Sprintf("%v", yr.Response),
+		ResponseDecision: yr.Response.Message,
+		ResponseCode:     yr.Response.Code,
+		SentAt:           yr.ResponseTime,
+		Type:             eventName,
+	}
+	tl.SentAt = time.Now().UTC()
 	event := amqp.EventNotify{
 		EventName: eventName,
-		EventData: r,
+		EventData: tl,
 	}
 	body, err := json.Marshal(event)
 	if err != nil {

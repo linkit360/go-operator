@@ -10,6 +10,7 @@ import (
 	"github.com/streadway/amqp"
 
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
+	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/rec"
 )
 
@@ -26,6 +27,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		var amount string
 		var ok bool
 		var yResp YonduResponse
+
 		begin := time.Now()
 
 		log.WithFields(log.Fields{
@@ -62,7 +64,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		}
 		yResp, operatorErr = svc.api.Charge(t.Msisdn, amount)
 		logRequests("charge", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("sent_charge_request", t); err != nil {
+		if err := svc.publishTransactionLog("sent_charge_request", yResp, t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
@@ -81,15 +83,9 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 				"msg":   "requeue",
 				"error": operatorErr.Error(),
 			}).Error("can't process")
-		nack:
-			if err := msg.Nack(false, true); err != nil {
-				log.WithFields(log.Fields{
-					"tid":   e.EventData.Tid,
-					"error": err.Error(),
-				}).Error("cannot nack")
-				time.Sleep(time.Second)
-				goto nack
-			}
+
+			msg.Nack(false, true)
+			continue
 		}
 	ack:
 		if err := msg.Ack(false); err != nil {

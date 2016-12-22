@@ -42,7 +42,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 		//<-svc.api.ThrottleMT
 		yResp, operatorErr = svc.api.MT(t.Msisdn, t.SMSText)
 		logRequests("mt", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("sent_content", t); err != nil {
+		if err := svc.publishTransactionLog("mt", yResp, t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
@@ -61,16 +61,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 				"msg":   "requeue",
 				"error": err.Error(),
 			}).Error("can't process")
-
-		nack:
-			if err := msg.Nack(false, true); err != nil {
-				log.WithFields(log.Fields{
-					"tid":   e.EventData.Tid,
-					"error": err.Error(),
-				}).Error("cannot nack")
-				time.Sleep(time.Second)
-				goto nack
-			}
+			msg.Nack(false, true)
 			continue
 		}
 	ack:

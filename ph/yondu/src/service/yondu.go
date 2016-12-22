@@ -39,6 +39,7 @@ func basicAuth(username, password string) string {
 }
 
 type YonduResponse struct {
+	Request  string `json:"request"`
 	Response struct {
 		Message string `json:"message,omitempty"`
 		Code    int    `json:"code,omitempty"`
@@ -79,6 +80,10 @@ func (y *Yondu) MT(msisdn, text string) (YonduResponse, error) {
 }
 
 func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err error) {
+	defer func() {
+		yonduResponse.Request = url
+		yonduResponse.ResponseTime = time.Now().UTC()
+	}()
 	y.client = &http.Client{
 		Timeout: time.Duration(y.conf.Timeout) * time.Second,
 	}
@@ -153,33 +158,44 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err err
 //{YourURL}/?msisdn=9171234567&transid=123456&timestamp=20160628024446&status_code=1
 
 type CallbackParameters struct {
-	Msisdn     string `json:"msisdn"`
-	TransID    string `json:"transid"`
-	Timestamp  string `json:"timestamp"`
-	StatusCode string `json:"status_code"`
+	Params struct {
+		Msisdn      string `json:"msisdn"`
+		TransID     string `json:"transid"`
+		RCVDTransId string `json:"rcvd_transid"`
+		Timestamp   string `json:"timestamp"`
+		StatusCode  string `json:"status_code"`
+	}
+	Raw string `json:"req_url"`
 }
 
 func (y *Yondu) Callback(c *gin.Context) {
-	p := CallbackParameters{}
+	p := CallbackParameters{
+		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+	}
 	var ok bool
-	p.Msisdn, ok = c.GetQuery("msisdn")
+	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
 		absentParameter("msisdn", c)
 		return
 	}
-	p.TransID, ok = c.GetQuery("transid")
+	p.Params.TransID, ok = c.GetQuery("transid")
 	if !ok {
 		absentParameter("transid", c)
 		return
 	}
-	p.Timestamp, ok = c.GetQuery("timestamp")
+	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
 		absentParameter("timestamp", c)
 		return
 	}
-	p.StatusCode, ok = c.GetQuery("status_code")
+	p.Params.StatusCode, ok = c.GetQuery("status_code")
 	if !ok {
 		absentParameter("status_code", c)
+		return
+	}
+	p.Params.RCVDTransId, ok = c.GetQuery("rcvd_transid")
+	if !ok {
+		absentParameter("rcvd_transid", c)
 		return
 	}
 	logResponses("callback", p)
@@ -190,8 +206,8 @@ func (y *Yondu) Callback(c *gin.Context) {
 		}).Error("sent callback failed")
 	} else {
 		log.WithFields(log.Fields{
-			"msisdn":  p.Msisdn,
-			"transId": p.TransID,
+			"msisdn":  p.Params.Msisdn,
+			"transId": p.Params.TransID,
 		}).Info("sent")
 	}
 }
@@ -204,31 +220,36 @@ func (y *Yondu) Callback(c *gin.Context) {
 //Sample Request:
 //{YourURL}/?msisdn=9171234567&message=Yourkeyword5 26633&transid=123456&timestamp=20160628024446
 type MOParameters struct {
-	Msisdn    string `json:"msisdn"`
-	TransID   string `json:"transid"`
-	Timestamp string `json:"timestamp"`
-	KeyWord   string `json:"message"`
+	Params struct {
+		Msisdn    string `json:"msisdn"`
+		TransID   string `json:"transid"`
+		Timestamp string `json:"timestamp"`
+		KeyWord   string `json:"message"`
+	}
+	Raw string `json:"req_url"`
 }
 
 func (y *Yondu) MO(c *gin.Context) {
-	p := MOParameters{}
+	p := MOParameters{
+		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+	}
 	var ok bool
-	p.Msisdn, ok = c.GetQuery("msisdn")
+	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
 		absentParameter("msisdn", c)
 		return
 	}
-	p.TransID, ok = c.GetQuery("transid")
+	p.Params.TransID, ok = c.GetQuery("transid")
 	if !ok {
 		absentParameter("transid", c)
 		return
 	}
-	p.Timestamp, ok = c.GetQuery("timestamp")
+	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
 		absentParameter("timestamp", c)
 		return
 	}
-	p.KeyWord, ok = c.GetQuery("message")
+	p.Params.KeyWord, ok = c.GetQuery("message")
 	if !ok {
 		absentParameter("message", c)
 		return
@@ -241,8 +262,8 @@ func (y *Yondu) MO(c *gin.Context) {
 		}).Error("sent mo failed")
 	} else {
 		log.WithFields(log.Fields{
-			"msisdn":  p.Msisdn,
-			"transId": p.TransID,
+			"msisdn":  p.Params.Msisdn,
+			"transId": p.Params.TransID,
 		}).Info("sent")
 	}
 

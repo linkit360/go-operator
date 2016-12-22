@@ -56,7 +56,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		}
 		yResp, operatorErr = svc.api.SendConsent(t.Msisdn, amount)
 		logRequests("sentconsent", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("sent_consent", t); err != nil {
+		if err := svc.publishTransactionLog("sent_consent", yResp, t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
