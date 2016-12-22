@@ -14,10 +14,23 @@ var (
 	WrongParameter m.Gauge
 	APIOutErrors   m.Gauge
 	APIOutSuccess  m.Gauge
-	APIInErrors    m.Gauge
-	APIINSuccess   m.Gauge
 	Dropped        m.Gauge
 	Empty          m.Gauge
+
+	ChargeRequestSuccess m.Gauge
+	ChargeRequestErrors  m.Gauge
+
+	MTRequestSuccess m.Gauge
+	MTRequestErrors  m.Gauge
+
+	SentConsentSuccess m.Gauge
+	SentConsentErrors  m.Gauge
+
+	MOSuccess m.Gauge
+	MOErrors  m.Gauge
+
+	CallbackSuccess m.Gauge
+	CallbackErrors  m.Gauge
 )
 
 func Init(appName string) {
@@ -27,21 +40,49 @@ func Init(appName string) {
 	Dropped = m.NewGauge("", appName, "dropped", "yondu queue dropped")
 	Empty = m.NewGauge("", appName, "empty", "yondu queue empty")
 	APIOutErrors = m.NewGauge("", appName, "api_out_errors", "yondu api out errors")
+
 	APIOutSuccess = m.NewGauge("", appName, "api_out_success", "yondu api out success")
-	APIInErrors = m.NewGauge("", appName, "api_in_errors", "yondu api in errors")
-	APIINSuccess = m.NewGauge("", appName, "api_in_success", "yondu api in success")
+
+	ChargeRequestSuccess = m.NewGauge("", appName, "charge_success", "yondu charge req")
+	ChargeRequestErrors = m.NewGauge("", appName, "charge_errors", "yondu charge req errors")
+
+	MTRequestSuccess = m.NewGauge("", appName, "mt_success", "yondu mt req success")
+	MTRequestErrors = m.NewGauge("", appName, "api_out_errors", "yondu api out errors")
+
+	SentConsentSuccess = m.NewGauge("", appName, "sentconsent_success", "yondu api out errors")
+	SentConsentErrors = m.NewGauge("", appName, "sentconsent_success", "yondu api out errors")
+
+	MOSuccess = m.NewGauge("", appName, "mo_success", "yondu mo success")
+	MOErrors = m.NewGauge("", appName, "mo_errors", "yondu mo errors")
+
+	CallbackSuccess = m.NewGauge("", appName, "mcallback_success", "yondu callback success")
+	CallbackErrors = m.NewGauge("", appName, "callback_errors", "yondu callback errors")
 
 	go func() {
 		for range time.Tick(time.Minute) {
-			//Success.Update()
-			//Errors.Update()
-			//WrongParameter.Update()
-			//Dropped.Update()
-			//Empty.Update()
-			//APIOutErrors.Update()
-			//APIOutSuccess.Update()
-			//APIInErrors.Update()
-			//APIINSuccess.Update()
+			Success.Update()
+			Errors.Update()
+			WrongParameter.Update()
+			Dropped.Update()
+			Empty.Update()
+
+			APIOutErrors.Update()
+			APIOutSuccess.Update()
+
+			ChargeRequestSuccess.Update()
+			ChargeRequestErrors.Update()
+
+			MTRequestSuccess.Update()
+			MTRequestErrors.Update()
+
+			SentConsentSuccess.Update()
+			SentConsentErrors.Update()
+
+			MOSuccess.Update()
+			MOErrors.Update()
+
+			CallbackSuccess.Update()
+			CallbackErrors.Update()
 		}
 	}()
 }

@@ -18,7 +18,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 		var t rec.Record
 		var err error
 		var operatorErr error
-		var yResp YonduResponse
+		var yResp YonduResponseExtended
 		begin := time.Now()
 
 		log.WithFields(log.Fields{

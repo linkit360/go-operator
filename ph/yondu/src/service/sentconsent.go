@@ -20,7 +20,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		var operatorErr error
 		var ok bool
 		var amount string
-		var yResp YonduResponse
+		var yResp YonduResponseExtended
 		begin := time.Now()
 
 		log.WithFields(log.Fields{

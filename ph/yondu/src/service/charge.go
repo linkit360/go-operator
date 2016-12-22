@@ -14,8 +14,8 @@ import (
 )
 
 type EventNotifyResponse struct {
-	EventName string        `json:"event_name,omitempty"`
-	EventData YonduResponse `json:"event_data,omitempty"`
+	EventName string                `json:"event_name,omitempty"`
+	EventData YonduResponseExtended `json:"event_data,omitempty"`
 }
 
 func processCharge(deliveries <-chan amqp.Delivery) {
@@ -25,7 +25,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		var err error
 		var amount string
 		var ok bool
-		var yResp YonduResponse
+		var yResp YonduResponseExtended
 
 		begin := time.Now()
 
@@ -63,7 +63,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		}
 		yResp, operatorErr = svc.api.Charge(t.Msisdn, amount)
 		logRequests("charge", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("sent_charge_request", yResp, t); err != nil {
+		if err := svc.publishTransactionLog("charge_request", yResp, t); err != nil {
 			log.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,

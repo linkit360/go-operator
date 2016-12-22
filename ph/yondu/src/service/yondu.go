@@ -38,13 +38,20 @@ func basicAuth(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
+type YonduResponseExtended struct {
+	RequestUrl      string        `json:"request"`
+	ResponseCode    int           `json:"response_code"`
+	ResponseError   int           `json:"response_error"`
+	ResponseRawBody string        `json:"response_raw_body"`
+	ResponseTime    time.Time     `json:"response_time"`
+	Yondu           YonduResponse `json:"response"`
+}
+
 type YonduResponse struct {
-	Request  string `json:"request"`
 	Response struct {
 		Message string `json:"message,omitempty"`
 		Code    int    `json:"code,omitempty"`
 	} `json:"response"`
-	ResponseTime time.Time `json:"response_time"`
 }
 
 //API URL: {URL}/m360api/v1/consent/{msisdn}/{amount}
@@ -54,8 +61,16 @@ type YonduResponse struct {
 //Required parameters: msisdn, amount
 //Sample Response: {"response":{"message":"verification sent","code":"2001"}}
 //Sample Request: {URL}/m360api/v1/consent/9171234567/P1
-func (y *Yondu) SendConsent(msisdn, amount string) (YonduResponse, error) {
-	return y.call(y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
+func (y *Yondu) SendConsent(msisdn, amount string) (yR YonduResponseExtended, err error) {
+	yR, err = y.call(y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
+	if err == nil {
+		m.Success.Inc()
+		m.SentConsentSuccess.Inc()
+	} else {
+		m.Errors.Inc()
+		m.SentConsentErrors.Inc()
+	}
+	return
 }
 
 //API URL: {URL}/m360api/v1/charging/{msisdn}/{amount}
@@ -65,8 +80,16 @@ func (y *Yondu) SendConsent(msisdn, amount string) (YonduResponse, error) {
 //Required parameters: msisdn, amount
 //Response: {"response":{"message":"successfully processed","code":"2006"}}
 //Sample Request: {URL}/m360api/v1/charging/9171234567/P1
-func (y *Yondu) Charge(msisdn, amount string) (YonduResponse, error) {
-	return y.call(y.conf.APIUrl+"/charging/"+msisdn+"/"+amount, 2006)
+func (y *Yondu) Charge(msisdn, amount string) (yR YonduResponseExtended, err error) {
+	yR, err = y.call(y.conf.APIUrl+"/charging/"+msisdn+"/"+amount, 2006)
+	if err == nil {
+		m.Success.Inc()
+		m.ChargeRequestSuccess.Inc()
+	} else {
+		m.Errors.Inc()
+		m.ChargeRequestErrors.Inc()
+	}
+	return
 }
 
 //API URL:  {URL}/m360api/v1/invalid/{msisdn}/{content}
@@ -75,14 +98,25 @@ func (y *Yondu) Charge(msisdn, amount string) (YonduResponse, error) {
 //Headers: Authorization: Bearer {token}
 //Required parameters: msisdn
 //Sample Request: {URL}/m360api/v1/invalid/9171234567/Hello world!
-func (y *Yondu) MT(msisdn, text string) (YonduResponse, error) {
-	return y.call(y.conf.APIUrl+"/invalid/"+msisdn+"/"+text, 2006)
+func (y *Yondu) MT(msisdn, text string) (yR YonduResponseExtended, err error) {
+	yR, err = y.call(y.conf.APIUrl+"/invalid/"+msisdn+"/"+text, 2006)
+	if err == nil {
+		m.Success.Inc()
+		m.MTRequestSuccess.Inc()
+	} else {
+		m.Errors.Inc()
+		m.MTRequestErrors.Inc()
+	}
+	return
 }
 
-func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err error) {
+func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended, err error) {
 	defer func() {
-		yonduResponse.Request = url
+		yonduResponse.RequestUrl = url
 		yonduResponse.ResponseTime = time.Now().UTC()
+		if err != nil {
+			yonduResponse.ResponseError = err.Error()
+		}
 	}()
 	y.client = &http.Client{
 		Timeout: time.Duration(y.conf.Timeout) * time.Second,
@@ -107,6 +141,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err err
 		}).Error("cannot process")
 		return
 	}
+	yonduResponse.ResponseCode = resp.StatusCode
 
 	bodyText, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -117,25 +152,27 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err err
 		return
 	}
 
-	if err = json.Unmarshal(bodyText, &yonduResponse); err != nil {
+	var responseJson YonduResponse
+	if err = json.Unmarshal(bodyText, &responseJson); err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
 		log.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
 	}
+	yonduResponse.Yondu = responseJson
 
-	if yonduResponse.Response.Code == code {
+	if yonduResponse.Yondu.Response.Code == code {
 		log.WithFields(log.Fields{
-			"response": y.conf.ResponseCode[yonduResponse.Response.Code],
-			"code":     yonduResponse.Response.Code,
+			"response": y.conf.ResponseCode[responseJson.Response.Code],
+			"code":     responseJson.Response.Code,
 		}).Debug("success")
 		return
 	}
 
-	codeStatus, ok := y.conf.ResponseCode[yonduResponse.Response.Code]
+	codeStatus, ok := y.conf.ResponseCode[responseJson.Response.Code]
 	if !ok {
-		err = fmt.Errorf("unexpected response code: %d", yonduResponse.Response.Code)
+		err = fmt.Errorf("unexpected response code: %d", responseJson.Response.Code)
 
 		log.WithFields(log.Fields{
 			"error": err.Error(),
@@ -144,9 +181,9 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponse, err err
 	}
 	log.WithFields(log.Fields{
 		"status": codeStatus,
-		"code":   yonduResponse.Response.Code,
+		"code":   responseJson.Response.Code,
 	}).Debug("received code")
-	return yonduResponse, fmt.Errorf("%s: %d", codeStatus, yonduResponse.Response.Code)
+	return yonduResponse, fmt.Errorf("%s: %d", codeStatus, responseJson.Response.Code)
 }
 
 //Callback
@@ -169,42 +206,64 @@ type CallbackParameters struct {
 }
 
 func (y *Yondu) Callback(c *gin.Context) {
+
 	p := CallbackParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 	}
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		absentParameter("msisdn", c)
 		return
 	}
 	p.Params.TransID, ok = c.GetQuery("transid")
 	if !ok {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		absentParameter("transid", c)
 		return
 	}
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		absentParameter("timestamp", c)
 		return
 	}
 	p.Params.StatusCode, ok = c.GetQuery("status_code")
 	if !ok {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		absentParameter("status_code", c)
 		return
 	}
 	p.Params.RCVDTransId, ok = c.GetQuery("rcvd_transid")
 	if !ok {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		absentParameter("rcvd_transid", c)
 		return
 	}
 	logResponses("callback", p)
 	if err := svc.publishCallback(p); err != nil {
+		m.Errors.Inc()
+		m.CallbackErrors.Inc()
+
 		log.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
 			"error": err.Error(),
 		}).Error("sent callback failed")
 	} else {
+		m.Success.Inc()
+		m.CallbackSuccess.Inc()
+
 		log.WithFields(log.Fields{
 			"msisdn":  p.Params.Msisdn,
 			"transId": p.Params.TransID,
@@ -236,31 +295,49 @@ func (y *Yondu) MO(c *gin.Context) {
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
 		absentParameter("msisdn", c)
 		return
 	}
 	p.Params.TransID, ok = c.GetQuery("transid")
 	if !ok {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
 		absentParameter("transid", c)
 		return
 	}
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
 		absentParameter("timestamp", c)
 		return
 	}
 	p.Params.KeyWord, ok = c.GetQuery("message")
 	if !ok {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
 		absentParameter("message", c)
 		return
 	}
 	logResponses("mo", p)
 	if err := svc.publishMO(p); err != nil {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
 		log.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
 			"error": err.Error(),
 		}).Error("sent mo failed")
 	} else {
+		m.Success.Inc()
+		m.MOSuccess.Inc()
+
 		log.WithFields(log.Fields{
 			"msisdn":  p.Params.Msisdn,
 			"transId": p.Params.TransID,

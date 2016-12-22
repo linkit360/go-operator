@@ -104,7 +104,7 @@ func InitService(
 		q.SendConsent.Name,
 	)
 }
-func logRequests(requestType string, t rec.Record, yResp YonduResponse, begin time.Time, err error) {
+func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, begin time.Time, err error) {
 	fields := log.Fields{
 		"yonduResponse": fmt.Sprintf("%#v", yResp),
 		"rec":           fmt.Sprintf("%#v", t),
@@ -154,22 +154,22 @@ func (svc *Service) publishMO(data MOParameters) error {
 	return nil
 }
 
-func (svc *Service) publishTransactionLog(eventName string, yr YonduResponse, t rec.Record) error {
+func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExtended, t rec.Record) error {
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              t.Tid,
 		Msisdn:           t.Msisdn,
 		OperatorToken:    t.OperatorToken,
 		OperatorCode:     t.OperatorCode,
 		CountryCode:      t.CountryCode,
-		Error:            "",
+		Error:            yr.ResponseError,
 		Price:            t.Price,
 		ServiceId:        t.ServiceId,
 		SubscriptionId:   t.SubscriptionId,
 		CampaignId:       t.CampaignId,
-		RequestBody:      yr.Request,
-		ResponseBody:     fmt.Sprintf("%v", yr.Response),
-		ResponseDecision: yr.Response.Message,
-		ResponseCode:     yr.Response.Code,
+		RequestBody:      yr.RequestUrl,
+		ResponseBody:     fmt.Sprintf("%v", yr.ResponseRawBody),
+		ResponseDecision: yr.Yondu.Response.Message,
+		ResponseCode:     yr.ResponseCode,
 		SentAt:           yr.ResponseTime,
 		Type:             eventName,
 	}
