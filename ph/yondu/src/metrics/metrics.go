@@ -35,6 +35,7 @@ func Init(appName string) {
 
 	Success = m.NewGauge("", "", "success", "success")
 	Errors = m.NewGauge("", "", "errors", "errors")
+	WrongParameter = m.NewGauge("", appName, "wrong_parameter", "wrong parameters")
 	Dropped = m.NewGauge("", appName, "dropped", "yondu queue dropped")
 	Empty = m.NewGauge("", appName, "empty", "yondu queue empty")
 

@@ -25,6 +25,29 @@ type Yondu struct {
 	requestLog  *log.Logger
 }
 
+func AddHandlers(r *gin.Engine) {
+	tgYonduAPI := r.Group("/api/")
+	tgYonduAPI.Group("/mo").GET("", AccessHandler, svc.YonduAPI.MO)
+	tgYonduAPI.Group("/callback").GET("", AccessHandler, svc.YonduAPI.Callback)
+}
+func AddTestHandlers(r *gin.Engine) {
+	tgYonduAPI := r.Group("/yondu/")
+	tgYonduAPI.Group("/charging").GET("", svc.YonduAPI.charge)
+	tgYonduAPI.Group("/consent").GET("", svc.YonduAPI.consent)
+	tgYonduAPI.Group("/invalid").GET("", svc.YonduAPI.invalid)
+}
+func (y *Yondu) charge(c *gin.Context) {
+	c.Writer.WriteHeader(200)
+	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
+}
+func (y *Yondu) consent(c *gin.Context) {
+	c.Writer.WriteHeader(200)
+	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
+}
+func (y *Yondu) invalid(c *gin.Context) {
+	c.Writer.WriteHeader(200)
+	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
+}
 func initYondu(yConf config.YonduConfig) *Yondu {
 	y := &Yondu{
 		conf:        yConf,
@@ -366,8 +389,7 @@ func AccessHandler(c *gin.Context) {
 	responseTime := time.Since(begin)
 	fields := log.Fields{
 		"method": c.Request.Method,
-		"path":   c.Request.URL.Path,
-		"req":    c.Request.URL.RawQuery,
+		"url":    c.Request.URL.Path + "?" + c.Request.URL.RawQuery,
 		"since":  responseTime,
 	}
 	if len(c.Errors) > 0 {

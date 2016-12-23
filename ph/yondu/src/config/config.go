@@ -53,11 +53,11 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/yondu/request.log" yaml:"request"`
 }
 type YonduQueuesConfig struct {
-	SendConsent    config.ConsumeQueueConfig `yaml:"send_consent"`
-	Charge         config.ConsumeQueueConfig `yaml:"yondu_charge"` // name yondu_requests
-	MT             config.ConsumeQueueConfig `yaml:"yondu_mt"`
-	CallBack       config.ConsumeQueueConfig `yaml:"callback"` //  "yondu_responses"`
-	MO             config.ConsumeQueueConfig `yaml:"mo"`       // "yondu_sms_responses"
+	SendConsent    config.ConsumeQueueConfig `yaml:"consent"`
+	Charge         config.ConsumeQueueConfig `yaml:"charge"`
+	MT             config.ConsumeQueueConfig `yaml:"mt"`
+	CallBack       config.ConsumeQueueConfig `yaml:"callback"`
+	MO             config.ConsumeQueueConfig `yaml:"mo"`
 	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
 }
 

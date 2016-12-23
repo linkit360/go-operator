@@ -21,53 +21,53 @@ func processMT(deliveries <-chan amqp.Delivery) {
 		var yResp YonduResponseExtended
 		begin := time.Now()
 
-		log.WithFields(log.Fields{
+		logCtx := log.WithFields(log.Fields{
+			"q": svc.conf.Yondu.Queue.MT.Name,
+		})
+		logCtx.WithFields(log.Fields{
 			"priority": msg.Priority,
 			"body":     string(msg.Body),
 		}).Debug("start process")
 
 		var e EventNotify
-		if err := json.Unmarshal(msg.Body, &e); err != nil {
+		if err = json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
 
-			log.WithFields(log.Fields{
+			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 				"msg":   "dropped",
 				"body":  string(msg.Body),
-			}).Error("consume from " + svc.conf.Yondu.Queue.MT.Name)
+			}).Error("consume")
 			goto ack
 		}
 		t = e.EventData
 
 		//<-svc.api.ThrottleMT
-		yResp, operatorErr = svc.api.MT(t.Msisdn, t.SMSText)
+		yResp, operatorErr = svc.YonduAPI.MT(t.Msisdn, t.SMSText)
 		logRequests("mt", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("mt", yResp, t); err != nil {
-			log.WithFields(log.Fields{
+		if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
+			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
 		} else {
-			log.WithFields(log.Fields{
-				"queue": svc.conf.Yondu.Queue.MT.Name,
+			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
-				"tid":   t.Tid,
 			}).Info("success(sent to telco, sent to transaction log)")
 		}
 		if operatorErr != nil {
-			log.WithFields(log.Fields{
+			logCtx.WithFields(log.Fields{
 				"rec":   fmt.Sprintf("%#v", t),
 				"msg":   "requeue",
-				"error": err.Error(),
+				"error": operatorErr.Error(),
 			}).Error("can't process")
 			msg.Nack(false, true)
 			continue
 		}
 	ack:
-		if err := msg.Ack(false); err != nil {
-			log.WithFields(log.Fields{
-				"tid":   e.EventData.Tid,
+		if err = msg.Ack(false); err != nil {
+			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 			}).Error("cannot ack")
 			time.Sleep(time.Second)

@@ -24,7 +24,7 @@ type EventNotify struct {
 	EventData rec.Record `json:"event_data,omitempty"`
 }
 type Service struct {
-	api               *Yondu
+	YonduAPI          *Yondu
 	SendConsentCh     <-chan amqp_driver.Delivery
 	VerifyTransCodeCh <-chan amqp_driver.Delivery
 	ChargeCh          <-chan amqp_driver.Delivery
@@ -56,7 +56,7 @@ func InitService(
 		Yondu:    yConf,
 	}
 	svc.notifier = amqp.NewNotifier(notifierConfig)
-	svc.api = initYondu(yConf)
+	svc.YonduAPI = initYondu(yConf)
 
 	if err := inmem_client.Init(inMemConfig); err != nil {
 		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
@@ -98,11 +98,12 @@ func InitService(
 		svc.consumer.MT,
 		svc.MTCh,
 		processMT,
-		q.SendConsent.ThreadsCount,
-		q.SendConsent.Name,
-		q.SendConsent.Name,
+		q.MT.ThreadsCount,
+		q.MT.Name,
+		q.MT.Name,
 	)
 }
+
 func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, begin time.Time, err error) {
 	fields := log.Fields{
 		"yonduResponse": fmt.Sprintf("%#v", yResp),
@@ -116,13 +117,13 @@ func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, 
 		fields["error"] = errStr
 	} else {
 	}
-	svc.api.requestLog.WithFields(fields).Println(requestType)
+	svc.YonduAPI.requestLog.WithFields(fields).Println(requestType)
 }
 func logResponses(reponseType string, params interface{}) {
 	fields := log.Fields{
 		"params": fmt.Sprintf("%#v", params),
 	}
-	svc.api.responseLog.WithFields(fields).Println(reponseType)
+	svc.YonduAPI.responseLog.WithFields(fields).Println(reponseType)
 }
 
 func (svc *Service) publishCallback(data CallbackParameters) error {

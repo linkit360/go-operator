@@ -12,3 +12,6 @@ build:
 	export GOOS=linux; export GOARCH=amd64; \
   go build -ldflags "-s -w" -o bin/yondu-linux-amd64 ; cp bin/yondu-linux-amd64 ~/linkit; cp dev/yondu.yml ~/linkit/;
 
+
+mo:
+	curl -v "http://localhost:50311/api/mo?msisdn=9123123&transid=111111&timestamp=20161223170000&message=play1"

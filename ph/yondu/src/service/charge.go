@@ -28,8 +28,11 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		var yResp YonduResponseExtended
 
 		begin := time.Now()
+		logCtx := log.WithFields(log.Fields{
+			"q": svc.conf.Yondu.Queue.Charge.Name,
+		})
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"priority": msg.Priority,
 			"body":     string(msg.Body),
 		}).Debug("start process")
@@ -38,46 +41,47 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
 
-			log.WithFields(log.Fields{
+			logCtx.WithFields(log.Fields{
 				"error":      err.Error(),
 				"msg":        "dropped",
 				"chargeBody": string(msg.Body),
-			}).Error("consume from " + svc.conf.Yondu.Queue.Charge.Name)
+			}).Error("consume")
 			goto ack
 		}
 
 		t = e.EventData
-
+		logCtx = logCtx.WithFields(log.Fields{
+			"tid": t.Tid,
+		})
 		//<-svc.api.ThrottleMT
 		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
 		if !ok {
 			m.Dropped.Inc()
 
 			err = fmt.Errorf("Unknown price to Yondu: %v", t.Price)
-			log.WithFields(log.Fields{
+			logCtx.WithFields(log.Fields{
 				"error":      err.Error(),
 				"msg":        "dropped",
 				"chargeBody": string(msg.Body),
 			}).Error("wrong price")
 			goto ack
 		}
-		yResp, operatorErr = svc.api.Charge(t.Msisdn, amount)
+		yResp, operatorErr = svc.YonduAPI.Charge(t.Msisdn, amount)
 		logRequests("charge", t, yResp, begin, operatorErr)
-		if err := svc.publishTransactionLog("charge_request", yResp, t); err != nil {
-			log.WithFields(log.Fields{
+		if err = svc.publishTransactionLog("charge_request", yResp, t); err != nil {
+			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
 		} else {
-			log.WithFields(log.Fields{
-				"queue": svc.conf.Yondu.Queue.Charge.Name,
+			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
 				"tid":   t.Tid,
 			}).Info("success(sent to telco, sent to transaction log)")
 		}
 		if operatorErr != nil {
-			log.WithFields(log.Fields{
+			logCtx.WithFields(log.Fields{
 				"rec":   fmt.Sprintf("%#v", t),
 				"msg":   "requeue",
 				"error": operatorErr.Error(),
@@ -87,8 +91,8 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 			continue
 		}
 	ack:
-		if err := msg.Ack(false); err != nil {
-			log.WithFields(log.Fields{
+		if err = msg.Ack(false); err != nil {
+			logCtx.WithFields(log.Fields{
 				"tid":   e.EventData.Tid,
 				"error": err.Error(),
 			}).Error("cannot ack")

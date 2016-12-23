@@ -31,7 +31,8 @@ func RunServer() {
 	log.WithField("CPUCount", nuCPU)
 
 	r := gin.New()
-	//yondo.AddTestHandlers(r)
+	service.AddTestHandlers(r)
+	service.AddHandlers(r)
 	m.AddHandler(r)
 
 	r.Run(":" + appConfig.Server.Port)
