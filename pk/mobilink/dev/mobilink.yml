@@ -26,7 +26,7 @@ consumer:
 
 publisher:
   pending_buffer_path: /home/centos/linkit/mobilink.json
-  chan_capacity: 100000
+  chan_capacity: 10
   conn:
     user: linkit
     pass: dg-U_oHhy7-

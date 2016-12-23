@@ -41,7 +41,7 @@ func basicAuth(username, password string) string {
 type YonduResponseExtended struct {
 	RequestUrl      string        `json:"request"`
 	ResponseCode    int           `json:"response_code"`
-	ResponseError   int           `json:"response_error"`
+	ResponseError   string        `json:"response_error"`
 	ResponseRawBody string        `json:"response_raw_body"`
 	ResponseTime    time.Time     `json:"response_time"`
 	Yondu           YonduResponse `json:"response"`

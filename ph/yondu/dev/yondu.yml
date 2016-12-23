@@ -99,7 +99,7 @@ consumer:
     port: 5672
 
 publisher:
-  chan_capacity: 100000
+  chan_capacity: 100
   conn:
     user: linkit
     pass: dg-U_oHhy7-
