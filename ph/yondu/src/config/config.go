@@ -40,7 +40,7 @@ type YonduConfig struct {
 	Timeout        int                  `default:"30" yaml:"timeout"`
 	APIUrl         string               `default:"http://localhost:50306/" yaml:"api_url"`
 	TransactionLog TransactionLogConfig `yaml:"transaction_log"`
-	ResponseCode   map[int]string       `yaml:"response_code"`
+	ResponseCode   map[string]string    `yaml:"response_code"`
 	Queue          YonduQueuesConfig    `yaml:"queues"`
 	Tariffs        map[int]string       `yaml:"tariffs"`
 }

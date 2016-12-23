@@ -3,7 +3,6 @@ package service
 // only sends to yondu, async
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -40,25 +39,31 @@ func processMT(deliveries <-chan amqp.Delivery) {
 			}).Error("consume")
 			goto ack
 		}
-		t = e.EventData
 
+		t = e.EventData
+		logCtx = logCtx.WithFields(log.Fields{
+			"tid": t.Tid,
+		})
+
+		if t.SMSText == "" {
+			m.Dropped.Inc()
+
+			logCtx.WithFields(log.Fields{
+				"msg": "dropped",
+			}).Error("empty text")
+			goto ack
+		}
 		//<-svc.api.ThrottleMT
 		yResp, operatorErr = svc.YonduAPI.MT(t.Msisdn, t.SMSText)
 		logRequests("mt", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
-				"tid":   t.Tid,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
-		} else {
-			logCtx.WithFields(log.Fields{
-				"event": e.EventName,
-			}).Info("success(sent to telco, sent to transaction log)")
 		}
 		if operatorErr != nil {
 			logCtx.WithFields(log.Fields{
-				"rec":   fmt.Sprintf("%#v", t),
 				"msg":   "requeue",
 				"error": operatorErr.Error(),
 			}).Error("can't process")

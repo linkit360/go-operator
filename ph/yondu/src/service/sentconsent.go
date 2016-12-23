@@ -48,15 +48,14 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 			"tid": t.Tid,
 		})
 		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
-		if !ok {
+		if !ok || amount == "" {
 			m.Dropped.Inc()
 
-			err = fmt.Errorf("Unknown price to Yondu: %v", t.Price)
+			err = fmt.Errorf("Unknown to Yondu: %v, %s", t.Price, amount)
 			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 				"msg":   "dropped",
-				"body":  string(msg.Body),
-			}).Error("wrong price")
+			}).Error("wrong price or empty amount")
 			goto ack
 		}
 		yResp, operatorErr = svc.YonduAPI.SendConsent(t.Msisdn, amount)
@@ -66,10 +65,6 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 				"event": e.EventName,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
-		} else {
-			logCtx.WithFields(log.Fields{
-				"event": e.EventName,
-			}).Info("success(sent to telco, sent to transaction log)")
 		}
 
 		if operatorErr != nil {

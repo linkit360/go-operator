@@ -15,3 +15,7 @@ build:
 
 mo:
 	curl -v "http://localhost:50311/api/mo?msisdn=9123123&transid=111111&timestamp=20161223170000&message=play1"
+
+
+callback:
+	curl -v "http://localhost:50311/api/callback?msisdn=9123123&transid=111111&timestamp=20161223170000&status_code=2006"

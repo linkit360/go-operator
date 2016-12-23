@@ -42,9 +42,9 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 			m.Dropped.Inc()
 
 			logCtx.WithFields(log.Fields{
-				"error":      err.Error(),
-				"msg":        "dropped",
-				"chargeBody": string(msg.Body),
+				"error": err.Error(),
+				"msg":   "dropped",
+				"body":  string(msg.Body),
 			}).Error("consume")
 			goto ack
 		}
@@ -55,15 +55,14 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		})
 		//<-svc.api.ThrottleMT
 		amount, ok = svc.conf.Yondu.Tariffs[t.Price]
-		if !ok {
+		if !ok || amount == "" {
 			m.Dropped.Inc()
 
-			err = fmt.Errorf("Unknown price to Yondu: %v", t.Price)
+			err = fmt.Errorf("Unknown to Yondu: %v, %s", t.Price, amount)
 			logCtx.WithFields(log.Fields{
-				"error":      err.Error(),
-				"msg":        "dropped",
-				"chargeBody": string(msg.Body),
-			}).Error("wrong price")
+				"error": err.Error(),
+				"msg":   "dropped",
+			}).Error("wrong price or empty amount")
 			goto ack
 		}
 		yResp, operatorErr = svc.YonduAPI.Charge(t.Msisdn, amount)
@@ -71,14 +70,8 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		if err = svc.publishTransactionLog("charge_request", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
-				"tid":   t.Tid,
 				"error": err.Error(),
 			}).Error("sent to transaction log failed")
-		} else {
-			logCtx.WithFields(log.Fields{
-				"event": e.EventName,
-				"tid":   t.Tid,
-			}).Info("success(sent to telco, sent to transaction log)")
 		}
 		if operatorErr != nil {
 			logCtx.WithFields(log.Fields{
@@ -93,7 +86,6 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 	ack:
 		if err = msg.Ack(false); err != nil {
 			logCtx.WithFields(log.Fields{
-				"tid":   e.EventData.Tid,
 				"error": err.Error(),
 			}).Error("cannot ack")
 			time.Sleep(time.Second)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,9 +33,9 @@ func AddHandlers(r *gin.Engine) {
 }
 func AddTestHandlers(r *gin.Engine) {
 	tgYonduAPI := r.Group("/yondu/")
-	tgYonduAPI.Group("/charging").GET("", svc.YonduAPI.charge)
-	tgYonduAPI.Group("/consent").GET("", svc.YonduAPI.consent)
-	tgYonduAPI.Group("/invalid").GET("", svc.YonduAPI.invalid)
+	tgYonduAPI.Group("/charging").GET("/:msisdn/:amount", AccessHandler, svc.YonduAPI.charge)
+	tgYonduAPI.Group("/consent").GET("/:msisdn/:amount", AccessHandler, svc.YonduAPI.consent)
+	tgYonduAPI.Group("/invalid").GET("/:msisdn/:text", AccessHandler, svc.YonduAPI.invalid)
 }
 func (y *Yondu) charge(c *gin.Context) {
 	c.Writer.WriteHeader(200)
@@ -48,6 +49,7 @@ func (y *Yondu) invalid(c *gin.Context) {
 	c.Writer.WriteHeader(200)
 	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
 }
+
 func initYondu(yConf config.YonduConfig) *Yondu {
 	y := &Yondu{
 		conf:        yConf,
@@ -73,7 +75,7 @@ type YonduResponseExtended struct {
 type YonduResponse struct {
 	Response struct {
 		Message string `json:"message,omitempty"`
-		Code    int    `json:"code,omitempty"`
+		Code    string `json:"code,omitempty"`
 	} `json:"response"`
 }
 
@@ -85,6 +87,11 @@ type YonduResponse struct {
 //Sample Response: {"response":{"message":"verification sent","code":"2001"}}
 //Sample Request: {URL}/m360api/v1/consent/9171234567/P1
 func (y *Yondu) SendConsent(msisdn, amount string) (yR YonduResponseExtended, err error) {
+	if err = checkOurParameters(msisdn, amount); err != nil {
+		m.Errors.Inc()
+		m.SentConsentErrors.Inc()
+		return
+	}
 	yR, err = y.call(y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
 	if err == nil {
 		m.Success.Inc()
@@ -104,6 +111,11 @@ func (y *Yondu) SendConsent(msisdn, amount string) (yR YonduResponseExtended, er
 //Response: {"response":{"message":"successfully processed","code":"2006"}}
 //Sample Request: {URL}/m360api/v1/charging/9171234567/P1
 func (y *Yondu) Charge(msisdn, amount string) (yR YonduResponseExtended, err error) {
+	if err = checkOurParameters(msisdn, amount); err != nil {
+		m.Errors.Inc()
+		m.ChargeRequestErrors.Inc()
+		return
+	}
 	yR, err = y.call(y.conf.APIUrl+"/charging/"+msisdn+"/"+amount, 2006)
 	if err == nil {
 		m.Success.Inc()
@@ -122,6 +134,11 @@ func (y *Yondu) Charge(msisdn, amount string) (yR YonduResponseExtended, err err
 //Required parameters: msisdn
 //Sample Request: {URL}/m360api/v1/invalid/9171234567/Hello world!
 func (y *Yondu) MT(msisdn, text string) (yR YonduResponseExtended, err error) {
+	if err = checkOurParameters(msisdn, text); err != nil {
+		m.Errors.Inc()
+		m.MTRequestErrors.Inc()
+		return
+	}
 	yR, err = y.call(y.conf.APIUrl+"/invalid/"+msisdn+"/"+text, 2006)
 	if err == nil {
 		m.Success.Inc()
@@ -131,6 +148,15 @@ func (y *Yondu) MT(msisdn, text string) (yR YonduResponseExtended, err error) {
 		m.MTRequestErrors.Inc()
 	}
 	return
+}
+func checkOurParameters(msisdn, second string) error {
+	if msisdn == "" {
+		return fmt.Errorf("Empty msisdn %s", msisdn)
+	}
+	if second == "" {
+		return fmt.Errorf("Empty text/amount%s", "")
+	}
+	return nil
 }
 
 func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended, err error) {
@@ -185,7 +211,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	}
 	yonduResponse.Yondu = responseJson
 
-	if yonduResponse.Yondu.Response.Code == code {
+	if yonduResponse.Yondu.Response.Code == strconv.Itoa(code) {
 		log.WithFields(log.Fields{
 			"response": y.conf.ResponseCode[responseJson.Response.Code],
 			"code":     responseJson.Response.Code,
@@ -233,6 +259,8 @@ func (y *Yondu) Callback(c *gin.Context) {
 	p := CallbackParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 	}
+	log.Debugf("url: %s", p.Raw)
+
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
@@ -267,13 +295,13 @@ func (y *Yondu) Callback(c *gin.Context) {
 		return
 	}
 	p.Params.RCVDTransId, ok = c.GetQuery("rcvd_transid")
-	if !ok {
-		m.Errors.Inc()
-		m.CallbackErrors.Inc()
-
-		absentParameter("rcvd_transid", c)
-		return
-	}
+	//if !ok {
+	//	m.Errors.Inc()
+	//	m.CallbackErrors.Inc()
+	//
+	//	absentParameter("rcvd_transid", c)
+	//	return
+	//}
 	logResponses("callback", p)
 	if err := svc.publishCallback(p); err != nil {
 		m.Errors.Inc()
@@ -315,6 +343,8 @@ func (y *Yondu) MO(c *gin.Context) {
 	p := MOParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 	}
+	log.Debugf("url: %s", p.Raw)
+
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
@@ -385,11 +415,16 @@ func absentParameter(name string, c *gin.Context) {
 func AccessHandler(c *gin.Context) {
 	begin := time.Now()
 	c.Next()
-
 	responseTime := time.Since(begin)
+
+	path := c.Request.URL.Path
+	if c.Request.URL.RawQuery != "" {
+		path = path + "?" + c.Request.URL.RawQuery
+
+	}
 	fields := log.Fields{
 		"method": c.Request.Method,
-		"url":    c.Request.URL.Path + "?" + c.Request.URL.RawQuery,
+		"url":    path,
 		"since":  responseTime,
 	}
 	if len(c.Errors) > 0 {
