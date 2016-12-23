@@ -3,7 +3,7 @@ app_name: telco
 
 
 server:
-  port: 50306
+  port: 50311
   threads_count: 1
   operator_name: yondo
 
@@ -33,7 +33,7 @@ yondu:
       prefetch_count:
       threads_count:
     yondu_charge:
-      name: yondu_requests
+      name: yondu_charge
       prefetch_count: 50
       threads_count: 10
     yondu_mt:
@@ -41,7 +41,7 @@ yondu:
       prefetch_count: 50
       threads_count: 10
     callback:
-      name: yondu_responses
+      name: yondu_callback
       prefetch_count: 50
       threads_count: 10
     mo:
@@ -90,7 +90,6 @@ yondu:
       1000:	1000
 
 consumer:
-  queue_prefetch_count: 4
   reconnect_delay: 10
   conn:
     user: linkit
@@ -99,6 +98,7 @@ consumer:
     port: 5672
 
 publisher:
+  pending_buffer_path: /home/centos/linkit/yondu_pending.json
   chan_capacity: 100
   conn:
     user: linkit

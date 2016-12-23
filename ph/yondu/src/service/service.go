@@ -11,7 +11,6 @@ import (
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/ph/yondu/src/config"
-	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	queue_config "github.com/vostrok/utils/config"
@@ -113,11 +112,9 @@ func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, 
 	}
 	errStr := ""
 	if err != nil {
-		m.APIOutErrors.Inc()
 		errStr = err.Error()
 		fields["error"] = errStr
 	} else {
-		m.APIOutSuccess.Inc()
 	}
 	svc.api.requestLog.WithFields(fields).Println(requestType)
 }
