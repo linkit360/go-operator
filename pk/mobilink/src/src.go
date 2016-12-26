@@ -16,7 +16,7 @@ import (
 
 func RunServer() {
 	appConfig := config.LoadConfig()
-	m.Init(appConfig.AppName)
+	m.Init(appConfig.MetricInstancePrefix)
 
 	service.InitService(
 		appConfig.Server,
