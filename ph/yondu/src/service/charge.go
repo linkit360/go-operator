@@ -67,7 +67,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 		}
 		yResp, operatorErr = svc.YonduAPI.Charge(t.Msisdn, amount)
 		logRequests("charge", t, yResp, begin, operatorErr)
-		if err = svc.publishTransactionLog("charge_request", yResp, t); err != nil {
+		if err = svc.publishTransactionLog("charge", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
 				"error": err.Error(),

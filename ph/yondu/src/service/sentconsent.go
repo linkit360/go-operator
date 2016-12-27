@@ -62,7 +62,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		}
 		yResp, operatorErr = svc.YonduAPI.SendConsent(t.Msisdn, amount)
 		logRequests("sentconsent", t, yResp, begin, operatorErr)
-		if err = svc.publishTransactionLog("sent_consent", yResp, t); err != nil {
+		if err = svc.publishTransactionLog("consent", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{
 				"event": e.EventName,
 				"error": err.Error(),
