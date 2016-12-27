@@ -43,7 +43,7 @@ func (y *Yondu) charge(c *gin.Context) {
 }
 func (y *Yondu) consent(c *gin.Context) {
 	c.Writer.WriteHeader(200)
-	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
+	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2001"}}`))
 }
 func (y *Yondu) invalid(c *gin.Context) {
 	c.Writer.WriteHeader(200)
@@ -179,7 +179,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 		}).Error("cannot process")
 		return
 	}
-	req.SetBasicAuth(y.conf.Auth.User, y.conf.Auth.Pass)
+	req.Header.Set("Authorization", "Bearer "+y.conf.AuthToken)
 
 	var resp *http.Response
 	resp, err = y.client.Do(req)
@@ -190,9 +190,15 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 		}).Error("cannot process")
 		return
 	}
+
 	yonduResponse.ResponseCode = resp.StatusCode
 
 	bodyText, err := ioutil.ReadAll(resp.Body)
+	log.WithFields(log.Fields{
+		"body": string(bodyText),
+		"url":  url,
+	}).Debug("")
+
 	if err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
 		log.WithFields(log.Fields{
@@ -232,7 +238,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 		"status": codeStatus,
 		"code":   responseJson.Response.Code,
 	}).Debug("received code")
-	return yonduResponse, fmt.Errorf("%s: %d", codeStatus, responseJson.Response.Code)
+	return yonduResponse, nil
 }
 
 //Callback

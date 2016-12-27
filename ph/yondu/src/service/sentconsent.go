@@ -53,8 +53,10 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 
 			err = fmt.Errorf("Unknown to Yondu: %v, %s", t.Price, amount)
 			logCtx.WithFields(log.Fields{
-				"error": err.Error(),
-				"msg":   "dropped",
+				"amount": amount,
+				"price":  t.Price,
+				"error":  err.Error(),
+				"msg":    "dropped",
 			}).Error("wrong price or empty amount")
 			goto ack
 		}

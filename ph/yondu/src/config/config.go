@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
+	"fmt"
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
 	"github.com/vostrok/utils/config"
@@ -36,7 +37,7 @@ type AppConfig struct {
 
 type YonduConfig struct {
 	Name           string               `yaml:"name"`
-	Auth           BasicAuth            `yaml:"auth"`
+	AuthToken      string               `yaml:"token"`
 	Timeout        int                  `default:"30" yaml:"timeout"`
 	APIUrl         string               `default:"http://localhost:50306/" yaml:"api_url"`
 	TransactionLog TransactionLogConfig `yaml:"transaction_log"`
@@ -44,13 +45,9 @@ type YonduConfig struct {
 	Queue          YonduQueuesConfig    `yaml:"queues"`
 	Tariffs        map[int]string       `yaml:"tariffs"`
 }
-type BasicAuth struct {
-	User string `yaml:"user"`
-	Pass string `yaml:"pass"`
-}
 type TransactionLogConfig struct {
-	ResponseLogPath string `default:"/var/log/linkit/yondu/response.log" yaml:"response"`
-	RequestLogPath  string `default:"/var/log/linkit/yondu/request.log" yaml:"request"`
+	ResponseLogPath string `default:"/var/log/linkit/yondu_response.log" yaml:"response"`
+	RequestLogPath  string `default:"/var/log/linkit/yondu_request.log" yaml:"request"`
 }
 type YonduQueuesConfig struct {
 	SendConsent    config.ConsumeQueueConfig `yaml:"consent"`
@@ -94,7 +91,7 @@ func LoadConfig() AppConfig {
 	appConfig.Yondo.TransactionLog.RequestLogPath =
 		envString("REQUEST_LOG", appConfig.Yondo.TransactionLog.RequestLogPath)
 
-	log.WithField("config", appConfig).Info("Config loaded")
+	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig
 }
 
