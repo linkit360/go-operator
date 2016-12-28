@@ -23,11 +23,6 @@ func processMT(deliveries <-chan amqp.Delivery) {
 		logCtx := log.WithFields(log.Fields{
 			"q": svc.conf.Yondu.Queue.MT.Name,
 		})
-		logCtx.WithFields(log.Fields{
-			"priority": msg.Priority,
-			"body":     string(msg.Body),
-		}).Debug("start process")
-
 		var e EventNotify
 		if err = json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
@@ -36,7 +31,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 				"error": err.Error(),
 				"msg":   "dropped",
 				"body":  string(msg.Body),
-			}).Error("consume")
+			}).Error("failed")
 			goto ack
 		}
 
@@ -54,7 +49,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 			goto ack
 		}
 		//<-svc.api.ThrottleMT
-		yResp, operatorErr = svc.YonduAPI.MT(t.Msisdn, t.SMSText)
+		yResp, operatorErr = svc.YonduAPI.MT(t.Tid, t.Msisdn, t.SMSText)
 		logRequests("mt", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{

@@ -15,6 +15,7 @@ import (
 	"github.com/vostrok/operator/ph/yondu/src/config"
 	m "github.com/vostrok/operator/ph/yondu/src/metrics"
 	logger "github.com/vostrok/utils/log"
+	"github.com/vostrok/utils/rec"
 )
 
 type Yondu struct {
@@ -53,8 +54,8 @@ func (y *Yondu) invalid(c *gin.Context) {
 func initYondu(yConf config.YonduConfig) *Yondu {
 	y := &Yondu{
 		conf:        yConf,
-		responseLog: logger.GetFileLogger(yConf.TransactionLog.ResponseLogPath),
-		requestLog:  logger.GetFileLogger(yConf.TransactionLog.RequestLogPath),
+		responseLog: logger.GetFileLogger(yConf.TransactionLogFilePath.ResponseLogPath),
+		requestLog:  logger.GetFileLogger(yConf.TransactionLogFilePath.RequestLogPath),
 	}
 	return y
 }
@@ -86,13 +87,13 @@ type YonduResponse struct {
 //Required parameters: msisdn, amount
 //Sample Response: {"response":{"message":"verification sent","code":"2001"}}
 //Sample Request: {URL}/m360api/v1/consent/9171234567/P1
-func (y *Yondu) SendConsent(msisdn, amount string) (yR YonduResponseExtended, err error) {
+func (y *Yondu) SendConsent(tid, msisdn, amount string) (yR YonduResponseExtended, err error) {
 	if err = checkOurParameters(msisdn, amount); err != nil {
 		m.Errors.Inc()
 		m.SentConsentErrors.Inc()
 		return
 	}
-	yR, err = y.call(y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
+	yR, err = y.call(tid, y.conf.APIUrl+"/consent/"+msisdn+"/"+amount, 2001)
 	if err == nil {
 		m.Success.Inc()
 		m.SentConsentSuccess.Inc()
@@ -110,13 +111,13 @@ func (y *Yondu) SendConsent(msisdn, amount string) (yR YonduResponseExtended, er
 //Required parameters: msisdn, amount
 //Response: {"response":{"message":"successfully processed","code":"2006"}}
 //Sample Request: {URL}/m360api/v1/charging/9171234567/P1
-func (y *Yondu) Charge(msisdn, amount string) (yR YonduResponseExtended, err error) {
+func (y *Yondu) Charge(tid, msisdn, amount string) (yR YonduResponseExtended, err error) {
 	if err = checkOurParameters(msisdn, amount); err != nil {
 		m.Errors.Inc()
 		m.ChargeRequestErrors.Inc()
 		return
 	}
-	yR, err = y.call(y.conf.APIUrl+"/charging/"+msisdn+"/"+amount, 2006)
+	yR, err = y.call(tid, y.conf.APIUrl+"/charging/"+msisdn+"/"+amount, 2006)
 	if err == nil {
 		m.Success.Inc()
 		m.ChargeRequestSuccess.Inc()
@@ -133,13 +134,13 @@ func (y *Yondu) Charge(msisdn, amount string) (yR YonduResponseExtended, err err
 //Headers: Authorization: Bearer {token}
 //Required parameters: msisdn
 //Sample Request: {URL}/m360api/v1/invalid/9171234567/Hello world!
-func (y *Yondu) MT(msisdn, text string) (yR YonduResponseExtended, err error) {
+func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err error) {
 	if err = checkOurParameters(msisdn, text); err != nil {
 		m.Errors.Inc()
 		m.MTRequestErrors.Inc()
 		return
 	}
-	yR, err = y.call(y.conf.APIUrl+"/invalid/"+msisdn+"/"+text, 2006)
+	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn+"/"+text, 2006)
 	if err == nil {
 		m.Success.Inc()
 		m.MTRequestSuccess.Inc()
@@ -159,7 +160,10 @@ func checkOurParameters(msisdn, second string) error {
 	return nil
 }
 
-func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended, err error) {
+func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExtended, err error) {
+	logCtx := log.WithFields(log.Fields{
+		"tid": tid,
+	})
 	defer func() {
 		yonduResponse.RequestUrl = url
 		yonduResponse.ResponseTime = time.Now().UTC()
@@ -174,7 +178,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		err = fmt.Errorf("http.NewRequest: %s", err.Error())
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
@@ -185,7 +189,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	resp, err = y.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("client.Do: %s", err.Error())
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
@@ -194,14 +198,16 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	yonduResponse.ResponseCode = resp.StatusCode
 
 	bodyText, err := ioutil.ReadAll(resp.Body)
-	log.WithFields(log.Fields{
+	logCtx.WithFields(log.Fields{
 		"body": string(bodyText),
 		"url":  url,
 	}).Debug("")
 
+	yonduResponse.ResponseRawBody = string(bodyText)
+
 	if err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
@@ -210,7 +216,7 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	var responseJson YonduResponse
 	if err = json.Unmarshal(bodyText, &responseJson); err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
@@ -218,10 +224,6 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	yonduResponse.Yondu = responseJson
 
 	if yonduResponse.Yondu.Response.Code == strconv.Itoa(code) {
-		log.WithFields(log.Fields{
-			"response": y.conf.ResponseCode[responseJson.Response.Code],
-			"code":     responseJson.Response.Code,
-		}).Debug("success")
 		return
 	}
 
@@ -229,12 +231,12 @@ func (y *Yondu) call(url string, code int) (yonduResponse YonduResponseExtended,
 	if !ok {
 		err = fmt.Errorf("unexpected response code: %d", responseJson.Response.Code)
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot process")
 		return
 	}
-	log.WithFields(log.Fields{
+	logCtx.WithFields(log.Fields{
 		"status": codeStatus,
 		"code":   responseJson.Response.Code,
 	}).Debug("received code")
@@ -258,14 +260,19 @@ type CallbackParameters struct {
 		StatusCode  string `json:"status_code"`
 	}
 	Raw string `json:"req_url"`
+	Tid string `json:"tid"`
 }
 
 func (y *Yondu) Callback(c *gin.Context) {
 
 	p := CallbackParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		Tid: rec.GenerateTID(),
 	}
-	log.Debugf("url: %s", p.Raw)
+	logCtx := log.WithFields(log.Fields{
+		"tid": p.Tid,
+	})
+	logCtx.Debugf("url: %s", p.Raw)
 
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
@@ -273,7 +280,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Errors.Inc()
 		m.CallbackErrors.Inc()
 
-		absentParameter("msisdn", c)
+		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
 	p.Params.TransID, ok = c.GetQuery("transid")
@@ -281,7 +288,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Errors.Inc()
 		m.CallbackErrors.Inc()
 
-		absentParameter("transid", c)
+		absentParameter(p.Tid, "transid", c)
 		return
 	}
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
@@ -289,7 +296,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Errors.Inc()
 		m.CallbackErrors.Inc()
 
-		absentParameter("timestamp", c)
+		absentParameter(p.Tid, "timestamp", c)
 		return
 	}
 	p.Params.StatusCode, ok = c.GetQuery("status_code")
@@ -297,7 +304,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Errors.Inc()
 		m.CallbackErrors.Inc()
 
-		absentParameter("status_code", c)
+		absentParameter(p.Tid, "status_code", c)
 		return
 	}
 	p.Params.RCVDTransId, ok = c.GetQuery("rcvd_transid")
@@ -313,7 +320,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Errors.Inc()
 		m.CallbackErrors.Inc()
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
 			"error": err.Error(),
 		}).Error("sent callback failed")
@@ -321,7 +328,7 @@ func (y *Yondu) Callback(c *gin.Context) {
 		m.Success.Inc()
 		m.CallbackSuccess.Inc()
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"msisdn":  p.Params.Msisdn,
 			"transId": p.Params.TransID,
 		}).Info("sent")
@@ -343,13 +350,18 @@ type MOParameters struct {
 		KeyWord   string `json:"message"`
 	}
 	Raw string `json:"req_url"`
+	Tid string `json:"tid"`
 }
 
 func (y *Yondu) MO(c *gin.Context) {
 	p := MOParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		Tid: rec.GenerateTID(),
 	}
-	log.Debugf("url: %s", p.Raw)
+	logCtx := log.WithFields(log.Fields{
+		"tid": p.Tid,
+	})
+	logCtx.Debugf("url: %s", p.Raw)
 
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
@@ -357,7 +369,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		absentParameter("msisdn", c)
+		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
 	p.Params.TransID, ok = c.GetQuery("transid")
@@ -365,7 +377,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		absentParameter("transid", c)
+		absentParameter(p.Tid, "transid", c)
 		return
 	}
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
@@ -373,7 +385,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		absentParameter("timestamp", c)
+		absentParameter(p.Tid, "timestamp", c)
 		return
 	}
 	p.Params.KeyWord, ok = c.GetQuery("message")
@@ -381,7 +393,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		absentParameter("message", c)
+		absentParameter(p.Tid, "message", c)
 		return
 	}
 	logResponses("mo", p)
@@ -389,7 +401,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
 			"error": err.Error(),
 		}).Error("sent mo failed")
@@ -397,7 +409,7 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.Success.Inc()
 		m.MOSuccess.Inc()
 
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"msisdn":  p.Params.Msisdn,
 			"transId": p.Params.TransID,
 		}).Info("sent")
@@ -405,11 +417,12 @@ func (y *Yondu) MO(c *gin.Context) {
 
 }
 
-func absentParameter(name string, c *gin.Context) {
+func absentParameter(tid, name string, c *gin.Context) {
 	m.WrongParameter.Inc()
 
 	err := fmt.Errorf("Cannot find: %s", name)
 	log.WithFields(log.Fields{
+		"tid":   tid,
 		"error": err.Error(),
 	}).Error("wrong param")
 	c.JSON(http.StatusInternalServerError, gin.H{

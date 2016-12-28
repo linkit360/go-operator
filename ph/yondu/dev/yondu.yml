@@ -3,14 +3,13 @@ app_name: telco
 
 
 server:
-  port: 50311
+  port: 50306
   threads_count: 1
-  operator_name: yondo
 
 yondu:
   name: yondu
   timeout: 40
-  api_url: http://localhost:50311/yondu
+  api_url: http://localhost:50306/yondu
   location: Asia/Karachi
   auth:
     user: 123

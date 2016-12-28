@@ -54,15 +54,7 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 					"action": "requeue",
 				}).Error("can't process")
 
-			nack:
-				if err := msg.Nack(false, true); err != nil {
-					log.WithFields(log.Fields{
-						"tid":   t.Tid,
-						"error": err.Error(),
-					}).Error("cannot ack")
-					time.Sleep(time.Second)
-					goto nack
-				}
+				msg.Nack(false, true)
 				continue
 			}
 

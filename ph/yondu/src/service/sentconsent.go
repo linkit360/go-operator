@@ -26,11 +26,6 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 		logCtx := log.WithFields(log.Fields{
 			"q": svc.conf.Yondu.Queue.SendConsent.Name,
 		})
-		logCtx.WithFields(log.Fields{
-			"priority": msg.Priority,
-			"body":     string(msg.Body),
-		}).Debug("start process")
-
 		var e EventNotify
 		if err = json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
@@ -60,7 +55,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 			}).Error("wrong price or empty amount")
 			goto ack
 		}
-		yResp, operatorErr = svc.YonduAPI.SendConsent(t.Msisdn, amount)
+		yResp, operatorErr = svc.YonduAPI.SendConsent(t.Tid, t.Msisdn, amount)
 		logRequests("sentconsent", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("consent", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{

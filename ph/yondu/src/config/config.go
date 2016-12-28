@@ -36,14 +36,14 @@ type AppConfig struct {
 }
 
 type YonduConfig struct {
-	Name           string               `yaml:"name"`
-	AuthToken      string               `yaml:"token"`
-	Timeout        int                  `default:"30" yaml:"timeout"`
-	APIUrl         string               `default:"http://localhost:50306/" yaml:"api_url"`
-	TransactionLog TransactionLogConfig `yaml:"transaction_log"`
-	ResponseCode   map[string]string    `yaml:"response_code"`
-	Queue          YonduQueuesConfig    `yaml:"queues"`
-	Tariffs        map[int]string       `yaml:"tariffs"`
+	Name                   string               `yaml:"name"`
+	AuthToken              string               `yaml:"token"`
+	Timeout                int                  `default:"30" yaml:"timeout"`
+	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
+	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
+	ResponseCode           map[string]string    `yaml:"response_code"`
+	Queue                  YonduQueuesConfig    `yaml:"queues"`
+	Tariffs                map[int]string       `yaml:"tariffs"`
 }
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/yondu_response.log" yaml:"response"`
@@ -86,10 +86,10 @@ func LoadConfig() AppConfig {
 	appConfig.Consumer.Conn.Host = envString("RBMQ_HOST", appConfig.Consumer.Conn.Host)
 	appConfig.Publisher.Conn.Host = envString("RBMQ_HOST", appConfig.Publisher.Conn.Host)
 
-	appConfig.Yondo.TransactionLog.ResponseLogPath =
-		envString("RESPONSE_LOG", appConfig.Yondo.TransactionLog.ResponseLogPath)
-	appConfig.Yondo.TransactionLog.RequestLogPath =
-		envString("REQUEST_LOG", appConfig.Yondo.TransactionLog.RequestLogPath)
+	appConfig.Yondo.TransactionLogFilePath.ResponseLogPath =
+		envString("RESPONSE_LOG", appConfig.Yondo.TransactionLogFilePath.ResponseLogPath)
+	appConfig.Yondo.TransactionLogFilePath.RequestLogPath =
+		envString("REQUEST_LOG", appConfig.Yondo.TransactionLogFilePath.RequestLogPath)
 
 	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig
