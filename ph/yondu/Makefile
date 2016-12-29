@@ -14,10 +14,13 @@ build:
 
 
 mo:
-	curl -v "http://localhost:50306/api/mo?msisdn=639153712383&transid=111111&timestamp=20161227101000&message=play1"
+	curl -v "http://localhost:50306/api/mo?msisdn=639153712383&transid=111111&timestamp=20161227101000&message=play on"
+
+callbackpaid:
+	curl -v "http://localhost:50306/api/callback?msisdn=639153712383&transid=111111&timestamp=20161227101000&status_code=0"
 
 callback:
-	curl -v "http://localhost:50306/api/callback?msisdn=639153712383&transid=111111&timestamp=20161227101000&status_code=2006"
+	curl -v "http://localhost:50306/api/callback?msisdn=639153712383&transid=111111&timestamp=20161227101000&status_code=1"
 
 charge:
 	curl -v "http://52.76.96.115/m360api/v1/charging/639175256925/P1"
