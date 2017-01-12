@@ -423,6 +423,8 @@ func absentParameter(tid, name string, c *gin.Context) {
 	err := fmt.Errorf("Cannot find: %s", name)
 	log.WithFields(log.Fields{
 		"tid":   tid,
+		"req":   c.Request.URL.Path,
+		"query": c.Request.URL.RawQuery,
 		"error": err.Error(),
 	}).Error("wrong param")
 	c.JSON(http.StatusInternalServerError, gin.H{

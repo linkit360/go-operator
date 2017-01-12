@@ -14,15 +14,18 @@ build:
 
 
 mo:
-	curl -v "http://localhost:50306/api/mo?msisdn=639153712383&transid=111111&timestamp=20161227101000&message=play on"
+	curl -v "http://localhost:50306/api/mo?msisdn=639055209652&transid=2910DMP9055209652148403120057&timestamp=20161227101000&message=play%20on"
+
+unsubscribe:
+	curl -v "http://localhost:50306/api/mo?msisdn=639055209652&transid=2910DMP9055209652148403120057&timestamp=20161227101000&message=play%20off"
 
 callbackpaid:
-	curl -v "http://localhost:50306/api/callback?msisdn=639153712383&transid=111111&timestamp=20161227101000&status_code=0"
+	curl -v "http://localhost:50306/api/callback?msisdn=639055209652&transid=2910KRE9055209652148403127752002&timestamp=20161227101000&status_code=0"
 
 callback:
-	curl -v "http://localhost:50306/api/callback?msisdn=639153712383&transid=111111&timestamp=20161227101000&status_code=1"
+	curl -v "http://localhost:50306/api/callback?msisdn=639055209652&transid=2910KRE9055209652148403127752002&timestamp=20161227101000&status_code=0"
 
 charge:
-	curl -v "http://52.76.96.115/m360api/v1/charging/639175256925/P1"
+	curl -v "http://52.76.96.115/m360api/v1/charging/9175256925/P1"
 
 # curl -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMyIsImlzcyI6Imh0dHA6XC9cLzUyLjc2Ljk2LjExNVwvbTM2MGFwaVwvYXBpXC9hdXRoZW50aWNhdGUiLCJpYXQiOjE0NzA2MzQ2NjcsImV4cCI6MTUwMjE3MDY2NywibmJmIjoxNDcwNjM0NjY3LCJqdGkiOiJkMTBjZGFjYmZmNjVhYzZmOThkNTE4OGMyZWRmY2VkMiJ9.5U1tkrbjw3mn1Y7fZt2mouSHTLZTVx6EFauIpG3ovok'  -v "http://52.76.96.115/m360api/v1/charging/639175256925/P1"

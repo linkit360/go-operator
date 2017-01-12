@@ -49,11 +49,6 @@ func processTarifficate(deliveries <-chan amqp.Delivery) {
 
 			<-svc.api.ThrottleMT
 			if err = svc.api.Tarifficate(&t); err != nil {
-				log.WithFields(log.Fields{
-					"error":  err.Error(),
-					"action": "requeue",
-				}).Error("can't process")
-
 				msg.Nack(false, true)
 				continue
 			}
