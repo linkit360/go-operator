@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -140,7 +141,9 @@ func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err erro
 		m.MTRequestErrors.Inc()
 		return
 	}
-	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+text, 2006)
+
+	yR, err = y.call(tid,
+		y.conf.APIUrl+"/invalid/"+url.QueryEscape(msisdn[2:])+"/"+url.QueryEscape(text), 2006)
 	if err == nil {
 		m.Success.Inc()
 		m.MTRequestSuccess.Inc()
