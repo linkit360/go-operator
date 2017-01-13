@@ -21,11 +21,17 @@ import (
 
 type Yondu struct {
 	conf        config.YonduConfig
-	ThrottleMT  <-chan time.Time
+	Throttle    ThrottleConfig
 	location    *time.Location
 	client      *http.Client
 	responseLog *log.Logger
 	requestLog  *log.Logger
+}
+
+type ThrottleConfig struct {
+	MT      <-chan time.Time
+	Consent <-chan time.Time
+	Charge  <-chan time.Time
 }
 
 func AddHandlers(r *gin.Engine) {
@@ -54,7 +60,12 @@ func (y *Yondu) invalid(c *gin.Context) {
 
 func initYondu(yConf config.YonduConfig) *Yondu {
 	y := &Yondu{
-		conf:        yConf,
+		conf: yConf,
+		Throttle: ThrottleConfig{
+			MT:      time.Tick(time.Second / time.Duration(yConf.Throttle.MT+1)),
+			Consent: time.Tick(time.Second / time.Duration(yConf.Throttle.Consent+1)),
+			Charge:  time.Tick(time.Second / time.Duration(yConf.Throttle.Charge+1)),
+		},
 		responseLog: logger.GetFileLogger(yConf.TransactionLogFilePath.ResponseLogPath),
 		requestLog:  logger.GetFileLogger(yConf.TransactionLogFilePath.RequestLogPath),
 	}
@@ -141,9 +152,7 @@ func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err erro
 		m.MTRequestErrors.Inc()
 		return
 	}
-
-	yR, err = y.call(tid,
-		y.conf.APIUrl+"/invalid/"+url.QueryEscape(msisdn[2:])+"/"+url.QueryEscape(text), 2006)
+	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+url.QueryEscape(msisdn[2:])+"/"+url.QueryEscape(text), 2006)
 	if err == nil {
 		m.Success.Inc()
 		m.MTRequestSuccess.Inc()
@@ -197,13 +206,20 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		}).Error("cannot process")
 		return
 	}
-
 	yonduResponse.ResponseCode = resp.StatusCode
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("status code: %d", resp.StatusCode)
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cannot process")
+		return
+	}
 
 	bodyText, err := ioutil.ReadAll(resp.Body)
 	logCtx.WithFields(log.Fields{
-		"body": string(bodyText),
-		"url":  url,
+		"body":           string(bodyText),
+		"respStatusCode": resp.StatusCode,
+		"url":            url,
 	}).Debug("")
 
 	yonduResponse.ResponseRawBody = string(bodyText)

@@ -55,6 +55,7 @@ func processSentConsent(deliveries <-chan amqp.Delivery) {
 			}).Error("wrong price or empty amount")
 			goto ack
 		}
+		<-svc.YonduAPI.Throttle.Consent
 		yResp, operatorErr = svc.YonduAPI.SendConsent(t.Tid, t.Msisdn, amount)
 		logRequests("sentconsent", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("consent", yResp, t); err != nil {

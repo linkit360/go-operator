@@ -65,6 +65,7 @@ func processCharge(deliveries <-chan amqp.Delivery) {
 			}).Error("wrong price or empty amount")
 			goto ack
 		}
+		<-svc.YonduAPI.Throttle.Charge
 		yResp, operatorErr = svc.YonduAPI.Charge(t.Tid, t.Msisdn, amount)
 		logRequests("charge", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("charge", yResp, t); err != nil {

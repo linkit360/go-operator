@@ -39,10 +39,16 @@ type YonduConfig struct {
 	AuthToken              string               `yaml:"token"`
 	Timeout                int                  `default:"30" yaml:"timeout"`
 	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
+	Throttle               ThrottleConfig       `yaml:"throttle"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	ResponseCode           map[string]string    `yaml:"response_code"`
 	Queue                  YonduQueuesConfig    `yaml:"queues"`
 	Tariffs                map[int]string       `yaml:"tariffs"`
+}
+type ThrottleConfig struct {
+	MT      int `yaml:"mt" default:"10000"`
+	Consent int `yaml:"mt" default:"10000"`
+	Charge  int `yaml:"mt" default:"10000"`
 }
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/yondu_response.log" yaml:"response"`
