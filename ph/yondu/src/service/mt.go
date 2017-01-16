@@ -51,20 +51,20 @@ func processMT(deliveries <-chan amqp.Delivery) {
 		<-svc.YonduAPI.Throttle.MT
 		yResp, operatorErr = svc.YonduAPI.MT(t.Tid, t.Msisdn, t.SMSText)
 		logRequests("mt", t, yResp, begin, operatorErr)
-		//if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
-		//	logCtx.WithFields(log.Fields{
-		//		"event": e.EventName,
-		//		"error": err.Error(),
-		//	}).Error("sent to transaction log failed")
-		//}
-		//if operatorErr != nil {
-		//	logCtx.WithFields(log.Fields{
-		//		"msg":   "requeue",
-		//		"error": operatorErr.Error(),
-		//	}).Error("can't process")
-		//	msg.Nack(false, true)
-		//	continue
-		//}
+		if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
+			logCtx.WithFields(log.Fields{
+				"event": e.EventName,
+				"error": err.Error(),
+			}).Error("sent to transaction log failed")
+		}
+		if operatorErr != nil {
+			logCtx.WithFields(log.Fields{
+				"msg":   "requeue",
+				"error": operatorErr.Error(),
+			}).Error("can't process")
+			msg.Nack(false, true)
+			continue
+		}
 	ack:
 		if err = msg.Ack(false); err != nil {
 			logCtx.WithFields(log.Fields{
