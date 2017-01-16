@@ -34,7 +34,19 @@ func RunServer() {
 	service.AddHandlers(r)
 	m.AddHandler(r)
 
+	r.NoRoute(notFound)
+
 	r.Run(":" + appConfig.Server.Port)
 
 	log.WithField("port", appConfig.Server.Port).Info("yondo init")
+}
+
+func notFound(c *gin.Context) {
+	log.WithFields(log.Fields{
+		"method": c.Request.Method,
+		"path":   c.Request.URL.Path,
+		"req":    c.Request.URL.RawQuery,
+	}).Info("404notfound")
+	metrics.PageNotFound.Inc()
+	c.JSON(404, struct{}{})
 }

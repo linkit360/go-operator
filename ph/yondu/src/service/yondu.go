@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -152,7 +153,7 @@ func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err erro
 		m.MTRequestErrors.Inc()
 		return
 	}
-	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+url.QueryEscape(msisdn[2:])+"/"+url.QueryEscape(text), 2006)
+	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+html.EscapeString(url.QueryEscape(text)), 2006)
 	if err == nil {
 		m.Success.Inc()
 		m.MTRequestSuccess.Inc()
@@ -175,6 +176,7 @@ func checkOurParameters(msisdn, second string) error {
 func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExtended, err error) {
 	logCtx := log.WithFields(log.Fields{
 		"tid": tid,
+		"url": url,
 	})
 	defer func() {
 		yonduResponse.RequestUrl = url
@@ -196,6 +198,7 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		return
 	}
 	req.Header.Set("Authorization", "Bearer "+y.conf.AuthToken)
+	req.Close = false
 
 	var resp *http.Response
 	resp, err = y.client.Do(req)
@@ -210,7 +213,8 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("status code: %d", resp.StatusCode)
 		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
+			"error":  err.Error(),
+			"status": resp.Status,
 		}).Error("cannot process")
 		return
 	}
@@ -437,7 +441,7 @@ func (y *Yondu) MO(c *gin.Context) {
 }
 
 func absentParameter(tid, name string, c *gin.Context) {
-	m.WrongParameter.Inc()
+	m.AbsentParameter.Inc()
 
 	err := fmt.Errorf("Cannot find: %s", name)
 	log.WithFields(log.Fields{

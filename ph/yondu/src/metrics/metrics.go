@@ -9,11 +9,12 @@ import (
 )
 
 var (
-	Success        m.Gauge
-	Errors         m.Gauge
-	WrongParameter m.Gauge
-	Dropped        m.Gauge
-	Empty          m.Gauge
+	Success         m.Gauge
+	Errors          m.Gauge
+	AbsentParameter m.Gauge
+	PageNotFound    m.Gauge
+	Dropped         m.Gauge
+	Empty           m.Gauge
 
 	ChargeRequestSuccess m.Gauge
 	ChargeRequestErrors  m.Gauge
@@ -35,7 +36,8 @@ func Init(appName string) {
 
 	Success = m.NewGauge("", "", "success", "success")
 	Errors = m.NewGauge("", "", "errors", "errors")
-	WrongParameter = m.NewGauge("", appName, "wrong_parameter", "wrong parameters")
+	AbsentParameter = m.NewGauge("", appName, "adsent_parameter", "wrong parameters")
+	PageNotFound = m.NewGauge("", appName, "404_page_not_found", "404 page not found")
 	Dropped = m.NewGauge("", appName, "dropped", "yondu queue dropped")
 	Empty = m.NewGauge("", appName, "empty", "yondu queue empty")
 
@@ -58,7 +60,8 @@ func Init(appName string) {
 		for range time.Tick(time.Minute) {
 			Success.Update()
 			Errors.Update()
-			WrongParameter.Update()
+			AbsentParameter.Update()
+			PageNotFound.Update()
 			Dropped.Update()
 			Empty.Update()
 

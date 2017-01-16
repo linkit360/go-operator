@@ -11,9 +11,9 @@ yondu:
   api_url: http://localhost:50306/yondu
   location: Asia/Karachi
   throttle:
-      charge: 1000
-      mt: 1000
-      consent: 1000
+      charge: 1
+      mt: 1
+      consent: 1
   transaction_log:
     response: /var/log/linkit/response_yondu.log
     request: /var/log/linkit/requests_yondu.log

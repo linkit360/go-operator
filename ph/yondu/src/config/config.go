@@ -46,9 +46,9 @@ type YonduConfig struct {
 	Tariffs                map[int]string       `yaml:"tariffs"`
 }
 type ThrottleConfig struct {
-	MT      int `yaml:"mt" default:"10000"`
-	Consent int `yaml:"mt" default:"10000"`
-	Charge  int `yaml:"mt" default:"10000"`
+	MT      int `yaml:"mt" default:"10"`
+	Consent int `yaml:"consent" default:"10"`
+	Charge  int `yaml:"charge" default:"10"`
 }
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/yondu_response.log" yaml:"response"`
