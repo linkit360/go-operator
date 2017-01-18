@@ -106,7 +106,9 @@ func (y *Yondu) SendConsent(tid, msisdn, amount string) (yR YonduResponseExtende
 		m.SentConsentErrors.Inc()
 		return
 	}
+	begin := time.Now()
 	yR, err = y.call(tid, y.conf.APIUrl+"/consent/"+msisdn[2:]+"/"+amount, 2001)
+	m.ConsentDuration.Observe(time.Since(begin).Seconds())
 	if err == nil {
 		m.Success.Inc()
 		m.SentConsentSuccess.Inc()
@@ -130,7 +132,9 @@ func (y *Yondu) Charge(tid, msisdn, amount string) (yR YonduResponseExtended, er
 		m.ChargeRequestErrors.Inc()
 		return
 	}
+	begin := time.Now()
 	yR, err = y.call(tid, y.conf.APIUrl+"/charging/"+msisdn[2:]+"/"+amount, 2006)
+	m.ChargeDuration.Observe(time.Since(begin).Seconds())
 	if err == nil {
 		m.Success.Inc()
 		m.ChargeRequestSuccess.Inc()
@@ -153,7 +157,9 @@ func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err erro
 		m.MTRequestErrors.Inc()
 		return
 	}
+	begin := time.Now()
 	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+html.EscapeString(url.QueryEscape(text)), 2006)
+	m.MTDuration.Observe(time.Since(begin).Seconds())
 	if err == nil {
 		m.Success.Inc()
 		m.MTRequestSuccess.Inc()

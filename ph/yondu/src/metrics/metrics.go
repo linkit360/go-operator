@@ -3,7 +3,7 @@ package metrics
 import (
 	"time"
 
-	//"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 
 	m "github.com/vostrok/utils/metrics"
 )
@@ -30,6 +30,10 @@ var (
 
 	CallbackSuccess m.Gauge
 	CallbackErrors  m.Gauge
+
+	MTDuration      prometheus.Summary
+	ChargeDuration  prometheus.Summary
+	ConsentDuration prometheus.Summary
 )
 
 func Init(appName string) {
@@ -55,6 +59,10 @@ func Init(appName string) {
 
 	CallbackSuccess = m.NewGauge("", appName, "callback_success", "yondu callback success")
 	CallbackErrors = m.NewGauge("", appName, "callback_errors", "yondu callback errors")
+
+	MTDuration = m.NewSummary(appName+"mt_duration_seconds", "mt duration seconds")
+	ChargeDuration = m.NewSummary(appName+"charge_duration_seconds", "charge duration seconds")
+	ConsentDuration = m.NewSummary(appName+"consent_duration_seconds", "consent duration seconds")
 
 	go func() {
 		for range time.Tick(time.Minute) {
