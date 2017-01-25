@@ -48,5 +48,5 @@ func notFound(c *gin.Context) {
 		"req":    c.Request.URL.RawQuery,
 	}).Info("404notfound")
 	metrics.PageNotFound.Inc()
-	c.JSON(404, struct{}{})
+	c.JSON(200, struct{}{})
 }

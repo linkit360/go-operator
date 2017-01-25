@@ -4,10 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -158,7 +156,7 @@ func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err erro
 		return
 	}
 	begin := time.Now()
-	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+html.EscapeString(url.QueryEscape(text)), 2006)
+	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+text, 2006)
 	m.MTDuration.Observe(time.Since(begin).Seconds())
 	if err == nil {
 		m.Success.Inc()
@@ -256,14 +254,34 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		return
 	}
 
+	switch responseJson.Response.Code {
+	case "2001":
+		m.ResponseCodes.VerificationSent2001.Inc()
+	case "2002":
+		m.ResponseCodes.InvalidMobileNumber2002.Inc()
+	case "2003":
+		m.ResponseCodes.VerificationSuccessful2003.Inc()
+	case "2004":
+		m.ResponseCodes.InvalidCodeCombination2004.Inc()
+	case "2005":
+		m.ResponseCodes.ChargedFailed2005.Inc()
+	case "2006":
+		m.ResponseCodes.SuccessfullyProcessed2006.Inc()
+	case "2007":
+		m.ResponseCodes.InvalidTariff2007.Inc()
+	default:
+		m.ResponseCodes.UnknownCode.Inc()
+	}
 	codeStatus, ok := y.conf.ResponseCode[responseJson.Response.Code]
 	if !ok {
-		err = fmt.Errorf("unexpected response code: %d", responseJson.Response.Code)
+		yonduResponse.ResponseError =
+			fmt.Errorf("unexpected response code: %s", responseJson.Response.Code).Error()
 
 		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
+			"error": "unexpected response code",
 		}).Error("cannot process")
-		return
+
+		return yonduResponse, nil
 	}
 	logCtx.WithFields(log.Fields{
 		"status": codeStatus,

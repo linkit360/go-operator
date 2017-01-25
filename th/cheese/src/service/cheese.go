@@ -45,13 +45,13 @@ func initCheese(yConf config.CheeseConfig) *Cheese {
 }
 
 type Params struct {
-	Ref    string `json:"ref"`
-	Msisdn string `json:"msisdn"`
-	Svk    string `json:"svk"`
-	Acs    string `json:"acs"`
-	Chn    string `json:"chn"`
-	Mdt    string `json:"time"`
-	Sub    string `json:"subordinary"`
+	Ref        string `json:"ref"`
+	Msisdn     string `json:"msisdn"`
+	ServiceKey string `json:"svk"`
+	Acs        string `json:"acs"`
+	Chn        string `json:"chn"`
+	Mdt        string `json:"time"`
+	Sub        string `json:"subordinary"`
 }
 
 func (cheese *Cheese) Ais(c *gin.Context) {
