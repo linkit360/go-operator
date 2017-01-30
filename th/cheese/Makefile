@@ -13,5 +13,11 @@ build:
   go build -ldflags "-s -w" -o bin/cheese-linux-amd64 ; cp bin/cheese-linux-amd64 ~/linkit; cp dev/cheese.yml ~/linkit/;
 
 
-mo:
-	curl -v "http://localhost:50306/api/mo?msisdn=639055209652&transid=2910DMP9055209652148403120057&timestamp=20161227101000&message=play%20on"
+ais:
+	curl -v "http://localhost:50306/api/mo/ais?ref=61201000015999095326&msn=66911111110&svk=450455555&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227"
+
+dtac:
+	curl -v "http://localhost:50306/api/mo/dtac?ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227"
+
+trueh:
+	curl -v "http://localhost:50306/api/mo/trueh?ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227"

@@ -23,7 +23,7 @@ callbackpaid:
 	curl -v "http://localhost:50306/api/callback?msisdn=639055209652&transid=2910KRE9055209652148403127752002&timestamp=20161227101000&status_code=0"
 
 callback:
-	curl -v "http://localhost:50306/api/callback?msisdn=639055209652&transid=2910KRE9055209652148403127752002&timestamp=20161227101000&status_code=0"
+	curl -v "http://localhost:50306/api/callback?msisdn=639055209652&transid=2910KRE9055209652148403127752002&timestamp=20161227101000&status_code=1"
 
 charge:
 	curl -v "http://52.76.96.115/m360api/v1/charging/9175256925/P1"

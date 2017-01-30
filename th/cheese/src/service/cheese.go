@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/vostrok/operator/th/cheese/src/config"
+	m "github.com/vostrok/operator/th/cheese/src/metrics"
 	logger "github.com/vostrok/utils/log"
 )
 
@@ -32,7 +33,7 @@ func AddHandlers(r *gin.Engine) {
 
 // nothing to add
 func AddTestHandlers(r *gin.Engine) {
-	_ := r.Group("/cheese/")
+	//:= r.Group("/cheese/")
 }
 func initCheese(yConf config.CheeseConfig) *Cheese {
 	y := &Cheese{
@@ -54,21 +55,31 @@ type Params struct {
 	Sub        string `json:"subordinary"`
 }
 
+// /api/mo/ais?ref=70127201524999064995&msn=66870443662&svk=450435203&acs=UNREG_IMMEDIATE&chn=IVR&mdt=2017-01-27%2020:15:28.463
 func (cheese *Cheese) Ais(c *gin.Context) {
 	cheese.mo("ais", c)
 }
 
+// api/mo/dtac?ref=200327131724321&svk=450435201&msn=66619921971&chn=5.CC(CRM)&acs=unregister&mdt=2017-01-27%2020:17:28.396
 func (cheese *Cheese) Dtac(c *gin.Context) {
 	cheese.mo("dtac", c)
 }
 
+// api/mo/trueh?ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227
 func (cheese *Cheese) Trueh(c *gin.Context) {
 	cheese.mo("trueh", c)
 }
 
 // ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs= REG_SUCCESS&chn=SMS&mdt=2016-12-01 00:00:18.227
 func (cheese *Cheese) mo(subordinary string, c *gin.Context) {
-
+	switch subordinary {
+	case "ais":
+		m.AisSuccess.Inc()
+	case "dtac":
+		m.DtacSuccess.Inc()
+	case "trueh":
+		m.TruehSuccess.Inc()
+	}
 }
 
 // just log and count all requests

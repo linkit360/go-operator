@@ -46,18 +46,17 @@ func InitService(
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.CheeseAPI = initCheese(cheeseConf)
 
-	if err := inmem_client.Init(inMemConfig); err != nil {
-		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
-	}
+	//if err := inmem_client.Init(inMemConfig); err != nil {
+	//	log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	//}
 }
 
-func logRequests(requestType string, t rec.Record, req *http.Request, begin *time.Time, err error) {
+func logRequests(requestType string, t rec.Record, req *http.Request, err error) {
 
 	fields := log.Fields{
 		"url":    req.URL.Path + "/" + req.URL.RawQuery,
 		"rec":    fmt.Sprintf("%#v", t),
 		"msisdn": t.Msisdn,
-		"took":   time.Since(begin),
 	}
 	errStr := ""
 	if err != nil {
@@ -83,7 +82,7 @@ func (svc *Service) publishMO(queue string, data interface{}) error {
 type Response struct {
 	RequestUrl string
 	Error      string
-	Time       *time.Time
+	Time       time.Time
 	Decision   string
 	Code       int
 	RawBody    string
@@ -113,6 +112,7 @@ func (svc *Service) publishTransactionLog(eventName string, t rec.Record, resp R
 		EventName: eventName,
 		EventData: tl,
 	}
+
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
