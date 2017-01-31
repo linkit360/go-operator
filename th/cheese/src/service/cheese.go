@@ -50,14 +50,6 @@ func initCheese(yConf config.CheeseConfig) *Cheese {
 	return y
 }
 
-// api/mo/dtac?
-// ref=200327131724321&
-// svk=450435201&
-// msn=66619921971&
-// chn=5.CC(CRM)
-// &acs=unregister
-// &mdt=2017-01-27%2020:17:28.396
-
 type Params struct {
 	Ref        string `json:"operator_token"`
 	Msisdn     string `json:"msisdn"`
@@ -246,6 +238,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	} else {
 		logCtx.WithFields(log.Fields{
 			"msisdn": r.Msisdn,
+			"tid":    r.Tid,
 			"ref":    r.OperatorToken,
 		}).Info("sent mo")
 	}

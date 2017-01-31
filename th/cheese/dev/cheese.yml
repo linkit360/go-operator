@@ -11,6 +11,7 @@ cheese:
   dtac_mnc: 05
   ais_mnc: 01
   trueh_mnc: 03
+  country_code: 66
   timeout: 40
   api_url:
   location: Asia/Karachi
