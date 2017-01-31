@@ -53,18 +53,15 @@ func InitService(
 	}
 }
 
-func logRequests(requestType string, t rec.Record, req *http.Request, err error) {
+func logRequests(requestType string, t rec.Record, req *http.Request, err string) {
 
 	fields := log.Fields{
 		"url":    req.URL.Path + "/" + req.URL.RawQuery,
 		"rec":    fmt.Sprintf("%#v", t),
 		"msisdn": t.Msisdn,
 	}
-	errStr := ""
-	if err != nil {
-		errStr = err.Error()
-		fields["error"] = errStr
-	} else {
+	if err != "" {
+		fields["error"] = err
 	}
 	svc.CheeseAPI.requestLog.WithFields(fields).Println(requestType)
 }

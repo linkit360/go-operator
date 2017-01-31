@@ -205,10 +205,11 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("cannot parse time")
+		r.OperatorErr = r.OperatorErr + " cannot parse time"
 		r.SentAt = time.Now().UTC()
 		err = nil
 	}
-
+	logRequests("mo", r, c.Request, r.OperatorErr)
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
