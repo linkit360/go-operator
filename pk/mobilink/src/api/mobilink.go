@@ -136,7 +136,16 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	r.OperatorToken = msisdn + time.Now().Format("20060102150405")[6:]
 	now := time.Now().In(mb.location).Format("20060102T15:04:05-0700")
 	requestBody := mb.conf.Connection.MT.TarifficateBody
-	requestBody = strings.Replace(requestBody, "%price%", "-"+strconv.Itoa(price), 1)
+
+	if mb.conf.AddBalanceServiceId > 0 && r.ServiceId == mb.conf.AddBalanceServiceId {
+		requestBody = strings.Replace(requestBody, "%price%", strconv.Itoa(price), 1)
+		log.WithFields(log.Fields{
+			"tid":    tid,
+			"msisdn": msisdn,
+		}).Info("add balance")
+	} else {
+		requestBody = strings.Replace(requestBody, "%price%", "-"+strconv.Itoa(price), 1)
+	}
 	requestBody = strings.Replace(requestBody, "%msisdn%", msisdn[2:], 1)
 	requestBody = strings.Replace(requestBody, "%token%", r.OperatorToken, 1)
 	requestBody = strings.Replace(requestBody, "%time%", now, 1)

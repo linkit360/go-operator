@@ -24,12 +24,13 @@ type Mobilink struct {
 	notifier    *amqp.Notifier
 }
 type Config struct {
-	Rps            int                  `default:"10" yaml:"rps"`
-	Enabled        bool                 `default:"true" yaml:"enabled"`
-	MTChanCapacity int                  `default:"1000" yaml:"channel_capacity"`
-	Location       string               `default:"Asia/Karachi" yaml:"location"`
-	TransactionLog TransactionLogConfig `yaml:"log_transaction"`
-	Connection     ConnnectionConfig    `yaml:"connection"`
+	Rps                 int                  `default:"10" yaml:"rps"`
+	Enabled             bool                 `default:"true" yaml:"enabled"`
+	MTChanCapacity      int                  `default:"1000" yaml:"channel_capacity"`
+	AddBalanceServiceId int64                `yaml:"add_balance_service_id"`
+	Location            string               `default:"Asia/Karachi" yaml:"location"`
+	TransactionLog      TransactionLogConfig `yaml:"log_transaction"`
+	Connection          ConnnectionConfig    `yaml:"connection"`
 }
 type TransactionLogConfig struct {
 	Queue           string `default:"transaction_log" yaml:"transaction_log"`

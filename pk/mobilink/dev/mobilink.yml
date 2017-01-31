@@ -40,6 +40,8 @@ mobilink:
     response: /var/log/linkit/response_mobilink.log
     request: /var/log/linkit/request_mobilink.log
   location: Asia/Karachi
+  add_balance_service_id: 1
+
   connection:
     mt:
       url: http://localhost:50306/mobilink/paid
