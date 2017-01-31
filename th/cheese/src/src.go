@@ -19,6 +19,7 @@ func RunServer() {
 
 	service.InitService(
 		appConfig.Server,
+		appConfig.Queues,
 		appConfig.Cheese,
 		appConfig.Consumer,
 		appConfig.Publisher,

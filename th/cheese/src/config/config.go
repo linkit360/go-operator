@@ -17,6 +17,7 @@ import (
 
 type ServiceConfig struct {
 	Server   ServerConfig
+	Queues   QueuesConfig
 	Consumer amqp.ConsumerConfig
 	Notifier amqp.NotifierConfig
 	Cheese   CheeseConfig
@@ -27,15 +28,25 @@ type ServerConfig struct {
 type AppConfig struct {
 	AppName   string                       `yaml:"app_name"`
 	Server    ServerConfig                 `yaml:"server"`
+	Queues    QueuesConfig                 `yaml:"queues"`
 	DB        db.DataBaseConfig            `yaml:"db"`
 	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
 	Publisher amqp.NotifierConfig          `yaml:"publisher"`
 	Cheese    CheeseConfig                 `yaml:"cheese"`
 	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
 }
+type QueuesConfig struct {
+	Pixels         string `yaml:"pixels" default:"pixels"`
+	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
+}
 
 type CheeseConfig struct {
 	Name                   string               `yaml:"name"`
+	AisMNC                 string               `yaml:"ais_mnc" `
+	DtacMNC                string               `yaml:"dtac_mnc" `
+	TruehMNC               string               `yaml:"trueh_mnc" `
+	MCC                    string               `yaml:"mcc"`
+	CountryCode            int64                `yaml:"country_code"`
 	Timeout                int                  `default:"30" yaml:"timeout"`
 	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
 	Throttle               ThrottleConfig       `yaml:"throttle,omitempty"`

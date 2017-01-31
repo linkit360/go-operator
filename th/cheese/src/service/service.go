@@ -11,6 +11,8 @@ import (
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/th/cheese/src/config"
+	m "github.com/vostrok/operator/th/cheese/src/metrics"
+	pixels "github.com/vostrok/pixels/src/notifier"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	"github.com/vostrok/utils/rec"
@@ -31,6 +33,7 @@ type Service struct {
 
 func InitService(
 	serverConfig config.ServerConfig,
+	queues config.QueuesConfig,
 	cheeseConf config.CheeseConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
@@ -39,6 +42,7 @@ func InitService(
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{
 		Server:   serverConfig,
+		Queues:   queues,
 		Consumer: consumerConfig,
 		Notifier: notifierConfig,
 		Cheese:   cheeseConf,
@@ -46,9 +50,9 @@ func InitService(
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.CheeseAPI = initCheese(cheeseConf)
 
-	//if err := inmem_client.Init(inMemConfig); err != nil {
-	//	log.WithField("error", err.Error()).Fatal("cannot init inmem client")
-	//}
+	if err := inmem_client.Init(inMemConfig); err != nil {
+		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	}
 }
 
 func logRequests(requestType string, t rec.Record, req *http.Request, err error) {
@@ -88,35 +92,74 @@ type Response struct {
 	RawBody    string
 }
 
-func (svc *Service) publishTransactionLog(eventName string, t rec.Record, resp Response) error {
-	tl := transaction_log_service.OperatorTransactionLog{
-		Tid:              t.Tid,
-		Msisdn:           t.Msisdn,
-		OperatorToken:    t.OperatorToken,
-		OperatorCode:     t.OperatorCode,
-		CountryCode:      t.CountryCode,
-		Error:            resp.Error,
-		Price:            t.Price,
-		ServiceId:        t.ServiceId,
-		SubscriptionId:   t.SubscriptionId,
-		CampaignId:       t.CampaignId,
-		RequestBody:      resp.RequestUrl,
-		ResponseBody:     resp.RawBody,
-		ResponseDecision: resp.Decision,
-		ResponseCode:     resp.Code,
-		SentAt:           resp.Time,
-		Type:             eventName,
+func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTransactionLog) (err error) {
+	defer func() {
+		fields := log.Fields{
+			"tid": tl.Tid,
+			"q":   svc.conf.Queues.TransactionLog,
+		}
+		if err != nil {
+			m.NotifyErrors.Inc()
+
+			fields["errors"] = err.Error()
+			fields["tl"] = fmt.Sprintf("%#v", tl)
+			log.WithFields(fields).Error("cannot enqueue")
+		} else {
+			log.WithFields(fields).Debug("sent")
+		}
+	}()
+	if tl.SentAt.IsZero() {
+		tl.SentAt = time.Now().UTC()
 	}
-	tl.SentAt = time.Now().UTC()
 	event := amqp.EventNotify{
-		EventName: eventName,
+		EventName: "mo",
 		EventData: tl,
 	}
-
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.TransactionLog, 0, body})
+	return nil
+}
+
+func (svc *Service) notifyPixel(r rec.Record) (err error) {
+	msg := pixels.Pixel{
+		Tid:            r.Tid,
+		Msisdn:         r.Msisdn,
+		CampaignId:     r.CampaignId,
+		SubscriptionId: r.SubscriptionId,
+		OperatorCode:   r.OperatorCode,
+		CountryCode:    r.CountryCode,
+		Pixel:          r.Pixel,
+		Publisher:      r.Publisher,
+	}
+
+	defer func() {
+		fields := log.Fields{
+			"tid": msg.Tid,
+			"q":   svc.conf.Queues.Pixels,
+		}
+		if err != nil {
+			m.NotifyErrors.Inc()
+
+			fields["errors"] = err.Error()
+			fields["pixel"] = fmt.Sprintf("%#v", msg)
+			log.WithFields(fields).Error("cannot enqueue")
+		} else {
+			log.WithFields(fields).Debug("sent")
+		}
+	}()
+	eventName := "pixels"
+	event := amqp.EventNotify{
+		EventName: eventName,
+		EventData: msg,
+	}
+	body, err := json.Marshal(event)
+	if err != nil {
+		err = fmt.Errorf("json.Marshal: %s", err.Error())
+		return err
+	}
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Queues.Pixels, uint8(0), body})
 	return nil
 }

@@ -1,15 +1,20 @@
 package service
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
+	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/th/cheese/src/config"
 	m "github.com/vostrok/operator/th/cheese/src/metrics"
+	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	logger "github.com/vostrok/utils/log"
+	rec "github.com/vostrok/utils/rec"
+	"strconv"
 )
 
 type Cheese struct {
@@ -45,14 +50,22 @@ func initCheese(yConf config.CheeseConfig) *Cheese {
 	return y
 }
 
+// api/mo/dtac?
+// ref=200327131724321&
+// svk=450435201&
+// msn=66619921971&
+// chn=5.CC(CRM)
+// &acs=unregister
+// &mdt=2017-01-27%2020:17:28.396
+
 type Params struct {
-	Ref        string `json:"ref"`
+	Ref        string `json:"operator_token"`
 	Msisdn     string `json:"msisdn"`
-	ServiceKey string `json:"svk"`
+	ServiceKey string `json:"service_key"`
 	Acs        string `json:"acs"`
-	Chn        string `json:"chn"`
-	Mdt        string `json:"time"`
-	Sub        string `json:"subordinary"`
+	Channel    string `json:"channel"`
+	DateTime   string `json:"time"`
+	Operator   string `json:"operator"`
 }
 
 // /api/mo/ais?ref=70127201524999064995&msn=66870443662&svk=450435203&acs=UNREG_IMMEDIATE&chn=IVR&mdt=2017-01-27%2020:15:28.463
@@ -65,20 +78,147 @@ func (cheese *Cheese) Dtac(c *gin.Context) {
 	cheese.mo("dtac", c)
 }
 
-// api/mo/trueh?ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227
 func (cheese *Cheese) Trueh(c *gin.Context) {
 	cheese.mo("trueh", c)
 }
 
 // ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs= REG_SUCCESS&chn=SMS&mdt=2016-12-01 00:00:18.227
-func (cheese *Cheese) mo(subordinary string, c *gin.Context) {
-	switch subordinary {
+func (cheese *Cheese) mo(operator string, c *gin.Context) {
+	operatorCode := ""
+	switch operator {
 	case "ais":
+		operatorCode = cheese.conf.MCC + cheese.conf.AisMNC
 		m.AisSuccess.Inc()
 	case "dtac":
+		operatorCode = cheese.conf.MCC + cheese.conf.DtacMNC
 		m.DtacSuccess.Inc()
 	case "trueh":
+		operatorCode = cheese.conf.MCC + cheese.conf.TruehMNC
 		m.TruehSuccess.Inc()
+	default:
+		m.UnknownOperator.Inc()
+	}
+	r := rec.Record{
+		Tid:         rec.GenerateTID(),
+		CountryCode: cheese.conf.CountryCode,
+	}
+	logCtx := log.WithField("tid", r.Tid)
+	logCtx.WithField("url", c.Request.URL.Path+"/"+c.Request.URL.RawQuery).Info("access")
+
+	var err error
+	r.OperatorCode, err = strconv.ParseInt(operatorCode, 10, 64)
+	if err != nil {
+		m.UnknownOperator.Inc()
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+			"code":  operatorCode,
+		}).Error("cannot parse operator code")
+	}
+
+	serviceKey, ok := c.GetQuery("svk")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Error("cann't find service key")
+		r.OperatorErr = r.OperatorErr + " no service key"
+	}
+	if len(serviceKey) >= 4 {
+		res, err := inmem_client.GetCampaignByKeyWord(serviceKey[:4])
+		if err != nil {
+			logCtx.WithFields(log.Fields{
+				"serviceKey": serviceKey,
+			}).Error("cannot find campaign by service key")
+		} else {
+			r.CampaignId = res.Id
+			r.ServiceId = res.ServiceId
+			service, err := inmem_client.GetServiceById(res.ServiceId)
+			if err != nil {
+				logCtx.WithFields(log.Fields{
+					"serviceKey": serviceKey,
+					"service_id": res.ServiceId,
+				}).Error("cannot get service by id")
+			} else {
+				r.Price = int(service.Price)
+				r.DelayHours = service.DelayHours
+				r.PaidHours = service.PaidHours
+				r.KeepDays = service.KeepDays
+				r.Periodic = false
+			}
+		}
+	} else {
+		m.WrongServiceKey.Inc()
+		logCtx.WithFields(log.Fields{
+			"serviceKey": serviceKey,
+		}).Error("wrong service key")
+	}
+
+	r.OperatorToken, ok = c.GetQuery("ref")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Error("cann't find operator token")
+		r.OperatorErr = r.OperatorErr + " no ref"
+	}
+	r.Msisdn, ok = c.GetQuery("msn")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
+		r.OperatorErr = r.OperatorErr + " no msn"
+	}
+	notice, ok := c.GetQuery("chn")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Warn("cann't find channel")
+		r.OperatorErr = r.OperatorErr + " no chn"
+	}
+	_, ok = c.GetQuery("acs")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Warn("cann't find acs")
+		r.OperatorErr = r.OperatorErr + " no acs"
+	}
+	dateTime, ok := c.GetQuery("mdt")
+	if !ok {
+		m.AbsentParameter.Inc()
+		logCtx.WithFields(log.Fields{}).Warn("cann't find date and time")
+		r.OperatorErr = r.OperatorErr + " no mdt"
+	}
+
+	r.SentAt, err = time.Parse("2006-01-02 15:04:05.999", dateTime)
+	if err != nil {
+		m.MOParseTimeError.Inc()
+
+		err = fmt.Errorf("time.Parse: %s", err.Error())
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cannot parse time")
+		r.SentAt = time.Now().UTC()
+		err = nil
+	}
+
+	tl := transaction_log_service.OperatorTransactionLog{
+		Tid:           r.Tid,
+		Msisdn:        r.Msisdn,
+		OperatorToken: r.OperatorToken,
+		OperatorCode:  r.OperatorCode,
+		CountryCode:   r.CountryCode,
+		Error:         r.OperatorErr,
+		Price:         r.Price,
+		ServiceId:     r.ServiceId,
+		//SubscriptionId:   r.SubscriptionId,
+		CampaignId:       r.CampaignId,
+		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		ResponseBody:     "",
+		ResponseDecision: "",
+		ResponseCode:     200,
+		SentAt:           r.SentAt,
+		Notice:           notice,
+		Type:             "mo",
+	}
+	svc.publishTransactionLog(tl)
+
+	r.Pixel, ok = c.GetQuery("aff_sub")
+	if ok && len(r.Pixel) >= 4 {
+		log.WithFields(log.Fields{}).Debug("found pixel")
+		svc.notifyPixel(r)
 	}
 }
 
