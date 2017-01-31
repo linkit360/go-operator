@@ -33,7 +33,6 @@ type Service struct {
 
 func InitService(
 	serverConfig config.ServerConfig,
-	queues config.QueuesConfig,
 	cheeseConf config.CheeseConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
@@ -42,7 +41,6 @@ func InitService(
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{
 		Server:   serverConfig,
-		Queues:   queues,
 		Consumer: consumerConfig,
 		Notifier: notifierConfig,
 		Cheese:   cheeseConf,
@@ -96,10 +94,11 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	defer func() {
 		fields := log.Fields{
 			"tid": tl.Tid,
-			"q":   svc.conf.Queues.TransactionLog,
+			"q":   svc.conf.Cheese.Queue.TransactionLog,
 		}
 		if err != nil {
 			m.NotifyErrors.Inc()
+			m.Errors.Inc()
 
 			fields["errors"] = err.Error()
 			fields["tl"] = fmt.Sprintf("%#v", tl)
@@ -138,10 +137,11 @@ func (svc *Service) notifyPixel(r rec.Record) (err error) {
 	defer func() {
 		fields := log.Fields{
 			"tid": msg.Tid,
-			"q":   svc.conf.Queues.Pixels,
+			"q":   svc.conf.Cheese.Queue.Pixels,
 		}
 		if err != nil {
 			m.NotifyErrors.Inc()
+			m.Errors.Inc()
 
 			fields["errors"] = err.Error()
 			fields["pixel"] = fmt.Sprintf("%#v", msg)
@@ -160,6 +160,6 @@ func (svc *Service) notifyPixel(r rec.Record) (err error) {
 		err = fmt.Errorf("json.Marshal: %s", err.Error())
 		return err
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Queues.Pixels, uint8(0), body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.Pixels, uint8(0), body})
 	return nil
 }

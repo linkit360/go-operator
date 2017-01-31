@@ -11,13 +11,11 @@ import (
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/db"
 )
 
 type ServiceConfig struct {
 	Server   ServerConfig
-	Queues   QueuesConfig
 	Consumer amqp.ConsumerConfig
 	Notifier amqp.NotifierConfig
 	Cheese   CheeseConfig
@@ -28,16 +26,11 @@ type ServerConfig struct {
 type AppConfig struct {
 	AppName   string                       `yaml:"app_name"`
 	Server    ServerConfig                 `yaml:"server"`
-	Queues    QueuesConfig                 `yaml:"queues"`
 	DB        db.DataBaseConfig            `yaml:"db"`
 	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
 	Publisher amqp.NotifierConfig          `yaml:"publisher"`
 	Cheese    CheeseConfig                 `yaml:"cheese"`
 	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
-}
-type QueuesConfig struct {
-	Pixels         string `yaml:"pixels" default:"pixels"`
-	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
 }
 
 type CheeseConfig struct {
@@ -60,10 +53,12 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/request_cheese.log" yaml:"request"`
 }
 type CheeseQueuesConfig struct {
-	Ais            config.ConsumeQueueConfig `yaml:"ais"`
-	Dtac           config.ConsumeQueueConfig `yaml:"dtac"`
-	Trueh          config.ConsumeQueueConfig `yaml:"trueh"`
-	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
+	//Ais            config.ConsumeQueueConfig `yaml:"ais"`
+	//Dtac           config.ConsumeQueueConfig `yaml:"dtac"`
+	//Trueh          config.ConsumeQueueConfig `yaml:"trueh"`
+	MO             string `yaml:"cheese_mo" default:"cheese_mo"`
+	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
+	Pixels         string `yaml:"pixels" default:"pixels"`
 }
 
 func LoadConfig() AppConfig {

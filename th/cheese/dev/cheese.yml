@@ -4,9 +4,6 @@ server:
   port: 50306
   threads_count: 1
 
-queues:
-  pixels: pixels
-  transaction_log: transaction_log
 
 cheese:
   name: cheese
@@ -21,6 +18,7 @@ cheese:
     response: /var/log/linkit/response_cheese.log
     request: /var/log/linkit/requests_cheese.log
   queues:
+    pixels: pixels
     transaction_log: transaction_log
 
 consumer:

@@ -161,6 +161,7 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		CountryCode:      t.CountryCode,
 		Error:            yr.ResponseError,
 		Price:            t.Price,
+		Notice:           t.Notice,
 		ServiceId:        t.ServiceId,
 		SubscriptionId:   t.SubscriptionId,
 		CampaignId:       t.CampaignId,

@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -14,7 +15,6 @@ import (
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	logger "github.com/vostrok/utils/log"
 	rec "github.com/vostrok/utils/rec"
-	"strconv"
 )
 
 type Cheese struct {
@@ -82,7 +82,6 @@ func (cheese *Cheese) Trueh(c *gin.Context) {
 	cheese.mo("trueh", c)
 }
 
-// ref=61201000015999095326&msn=669XXXXXXX0&svk=4504XXXXX&acs= REG_SUCCESS&chn=SMS&mdt=2016-12-01 00:00:18.227
 func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	operatorCode := ""
 	switch operator {
@@ -96,6 +95,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		operatorCode = cheese.conf.MCC + cheese.conf.TruehMNC
 		m.TruehSuccess.Inc()
 	default:
+		m.Errors.Inc()
 		m.UnknownOperator.Inc()
 	}
 	r := rec.Record{
@@ -109,6 +109,8 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	r.OperatorCode, err = strconv.ParseInt(operatorCode, 10, 64)
 	if err != nil {
 		m.UnknownOperator.Inc()
+		m.Errors.Inc()
+
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 			"code":  operatorCode,
@@ -118,20 +120,26 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	serviceKey, ok := c.GetQuery("svk")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
+
 		logCtx.WithFields(log.Fields{}).Error("cann't find service key")
 		r.OperatorErr = r.OperatorErr + " no service key"
 	}
 	if len(serviceKey) >= 4 {
 		res, err := inmem_client.GetCampaignByKeyWord(serviceKey[:4])
 		if err != nil {
+			m.Errors.Inc()
+
 			logCtx.WithFields(log.Fields{
-				"serviceKey": serviceKey,
+				"serviceKey": serviceKey[:4],
 			}).Error("cannot find campaign by service key")
 		} else {
 			r.CampaignId = res.Id
 			r.ServiceId = res.ServiceId
 			service, err := inmem_client.GetServiceById(res.ServiceId)
 			if err != nil {
+				m.Errors.Inc()
+
 				logCtx.WithFields(log.Fields{
 					"serviceKey": serviceKey,
 					"service_id": res.ServiceId,
@@ -145,6 +153,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 			}
 		}
 	} else {
+		m.Errors.Inc()
 		m.WrongServiceKey.Inc()
 		logCtx.WithFields(log.Fields{
 			"serviceKey": serviceKey,
@@ -154,30 +163,35 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	r.OperatorToken, ok = c.GetQuery("ref")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find operator token")
 		r.OperatorErr = r.OperatorErr + " no ref"
 	}
 	r.Msisdn, ok = c.GetQuery("msn")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
 		r.OperatorErr = r.OperatorErr + " no msn"
 	}
 	notice, ok := c.GetQuery("chn")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find channel")
 		r.OperatorErr = r.OperatorErr + " no chn"
 	}
 	_, ok = c.GetQuery("acs")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find acs")
 		r.OperatorErr = r.OperatorErr + " no acs"
 	}
 	dateTime, ok := c.GetQuery("mdt")
 	if !ok {
 		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find date and time")
 		r.OperatorErr = r.OperatorErr + " no mdt"
 	}
@@ -185,6 +199,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	r.SentAt, err = time.Parse("2006-01-02 15:04:05.999", dateTime)
 	if err != nil {
 		m.MOParseTimeError.Inc()
+		m.Errors.Inc()
 
 		err = fmt.Errorf("time.Parse: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -195,15 +210,14 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	}
 
 	tl := transaction_log_service.OperatorTransactionLog{
-		Tid:           r.Tid,
-		Msisdn:        r.Msisdn,
-		OperatorToken: r.OperatorToken,
-		OperatorCode:  r.OperatorCode,
-		CountryCode:   r.CountryCode,
-		Error:         r.OperatorErr,
-		Price:         r.Price,
-		ServiceId:     r.ServiceId,
-		//SubscriptionId:   r.SubscriptionId,
+		Tid:              r.Tid,
+		Msisdn:           r.Msisdn,
+		OperatorToken:    r.OperatorToken,
+		OperatorCode:     r.OperatorCode,
+		CountryCode:      r.CountryCode,
+		Error:            r.OperatorErr,
+		Price:            r.Price,
+		ServiceId:        r.ServiceId,
 		CampaignId:       r.CampaignId,
 		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 		ResponseBody:     "",
@@ -220,6 +234,21 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		log.WithFields(log.Fields{}).Debug("found pixel")
 		svc.notifyPixel(r)
 	}
+
+	if err := svc.publishMO(cheese.conf.Queue.MO, r); err != nil {
+		m.Errors.Inc()
+
+		logCtx.WithFields(log.Fields{
+			"p":     fmt.Sprintf("%#v", r),
+			"error": err.Error(),
+		}).Error("sent mo failed")
+	} else {
+		logCtx.WithFields(log.Fields{
+			"msisdn": r.Msisdn,
+			"ref":    r.OperatorToken,
+		}).Info("sent mo")
+	}
+	m.Success.Inc()
 }
 
 // just log and count all requests
