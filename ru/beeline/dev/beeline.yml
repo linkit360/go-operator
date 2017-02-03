@@ -1,0 +1,40 @@
+app_name: telco
+
+server:
+  port: 50306
+  threads_count: 1
+
+
+beeline:
+  name: beeline
+  mcc: 520
+  mnc: 05
+  country_code: 66
+  timeout: 40
+  api_url:
+  location: Asia/Karachi
+  transaction_log:
+    response: /var/log/linkit/response_beeline.log
+    request: /var/log/linkit/requests_beeline.log
+  queues:
+    transaction_log: transaction_log
+  smpp:
+
+
+consumer:
+  reconnect_delay: 10
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
+publisher:
+  chan_capacity: 100
+  pending_buffer_path: /home/centos/linkit/beeline_pending.json
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
