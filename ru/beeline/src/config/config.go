@@ -15,7 +15,6 @@ import (
 )
 
 type ServiceConfig struct {
-	Server   ServerConfig
 	Beeline  BeelineConfig
 	Consumer amqp.ConsumerConfig
 	Notifier amqp.NotifierConfig
@@ -32,16 +31,26 @@ type AppConfig struct {
 	Publisher amqp.NotifierConfig          `yaml:"publisher"`
 	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
 }
-
+type SmppConfig struct {
+	Addr     string `yaml:"addr" default:"217.118.84.12:3340"`
+	User     string `yaml:"user" default:"1637571"`
+	Password string `yaml:"pass" default:"wBy4E2Tz"`
+	Timeout  int    `yaml:"timeout"`
+}
 type BeelineConfig struct {
 	Name                   string               `yaml:"name"`
 	MccMnc                 int64                `yaml:"mccmnc"`
 	CountryCode            int64                `yaml:"country_code"`
-	Timeout                int                  `default:"30" yaml:"timeout"`
-	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
-	Throttle               ThrottleConfig       `yaml:"throttle,omitempty"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  BeelineQueuesConfig  `yaml:"queues"`
+	SMPP                   SmppConfig           `yaml:"smpp"`
+}
+type SmppConfig struct {
+	ShortNumber string `default:"4162" yaml:"short_number" json:"short_number"`
+	Addr        string `default:"182.16.255.46:15019" yaml:"endpoint"`
+	User        string `default:"SLYEPPLA" yaml:"user"`
+	Password    string `default:"SLYPEE_1" yaml:"pass"`
+	Timeout     int    `default:"20" yaml:"timeout"`
 }
 type ThrottleConfig struct {
 	HTTP int `yaml:"http"`

@@ -3,12 +3,13 @@ package metrics
 import (
 	"time"
 
-	//"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 
 	m "github.com/vostrok/utils/metrics"
 )
 
 var (
+	Incoming         m.Gauge
 	Success          m.Gauge
 	Errors           m.Gauge
 	AbsentParameter  m.Gauge
@@ -18,6 +19,7 @@ var (
 	NotifyErrors     m.Gauge
 	MOParseTimeError m.Gauge
 	WrongServiceKey  m.Gauge
+	SMPPConnected    prometheus.Gauge
 )
 
 func Init(appName string) {
@@ -34,6 +36,7 @@ func Init(appName string) {
 
 	go func() {
 		for range time.Tick(time.Minute) {
+			Incoming.Update()
 			Success.Update()
 			Errors.Update()
 			AbsentParameter.Update()

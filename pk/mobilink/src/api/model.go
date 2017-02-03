@@ -63,8 +63,6 @@ func My(msisdn string) bool {
 	return msisdn[:2] == "92"
 }
 
-// todo: chan gap cannot be too big bzs of the size
-
 func Init(
 	mobilinkRps int,
 	mobilinkConf Config,
