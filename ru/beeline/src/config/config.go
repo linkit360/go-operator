@@ -55,12 +55,14 @@ type SmppConfig struct {
 type ThrottleConfig struct {
 	HTTP int `yaml:"http"`
 }
+
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/response_beeline.log" yaml:"response"`
 	RequestLogPath  string `default:"/var/log/linkit/request_beeline.log" yaml:"request"`
 }
 type BeelineQueuesConfig struct {
 	MO             string `yaml:"mo" default:"beeline_mo"`
+	DBActions      string `yaml:"db_actions"`
 	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
 }
 

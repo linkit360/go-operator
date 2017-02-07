@@ -8,12 +8,15 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	smpp_client "github.com/fiorix/go-smpp/smpp"
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
+	"github.com/vostrok/operator/ru/beeline/src/config"
 	m "github.com/vostrok/operator/ru/beeline/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
+	"github.com/vostrok/utils/amqp"
 	rec "github.com/vostrok/utils/rec"
 )
 
@@ -46,8 +49,15 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	tlv := p.TLVFields()
 
 	switch string(tlv[pdufield.SourcePort].Bytes()) {
-	case "8":
+	case "3": // subscription enabled
+	case "4": // subscritpion disabled
+	case "5": // charge notify. charged <sum> rub. Next date ...
+	// send DELIVER_SM_RESP с CommandStatus = 0, любые другие коды отличные от 0 - отказ Провайдера.
 
+	case "6": // block_subscribtion - unsubscribe
+		unsubscribeAll(r)
+	case "7": // block subscriber
+	case "9": // msisdn change
 	}
 }
 
@@ -154,6 +164,54 @@ func (svc *Service) transactionLog(p pdu.Body, r rec.Record) {
 	svc.publishTransactionLog(tl)
 }
 
+func unsubscribeAll(msg rec.Record) error {
+	return _notifyDBAction("UnsubscribeAll", msg)
+}
+func _notifyDBAction(eventName string, msg rec.Record) (err error) {
+	msg.SentAt = time.Now().UTC()
+	defer func() {
+		if err != nil {
+			fields := log.Fields{
+				"data":  fmt.Sprintf("%#v", msg),
+				"q":     svc.conf.Beeline.Queue.DBActions,
+				"event": eventName,
+				"error": fmt.Errorf(eventName+": %s", err.Error()),
+			}
+			log.WithFields(fields).Error("cannot send")
+		} else {
+			fields := log.Fields{
+				"event":    eventName,
+				"tid":      msg.Tid,
+				"status":   msg.SubscriptionStatus,
+				"periodic": msg.Periodic,
+				"q":        svc.conf.Beeline.Queue.DBActions,
+			}
+			log.WithFields(fields).Info("sent")
+		}
+	}()
+
+	if eventName == "" {
+		err = fmt.Errorf("QueueSend: %s", "Empty event name")
+		return
+	}
+
+	event := amqp.EventNotify{
+		EventName: eventName,
+		EventData: msg,
+	}
+	var body []byte
+	body, err = json.Marshal(event)
+
+	if err != nil {
+		err = fmt.Errorf(eventName+" json.Marshal: %s", err.Error())
+		return
+	}
+	svc.notifier.Publish(amqp.AMQPMessage{
+		QueueName: svc.conf.Beeline.Queue.DBActions,
+		Body:      body,
+	})
+	return nil
+}
 func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) *smpp_client.Transceiver {
 	smppTransceiver := &smpp_client.Transceiver{
 		Addr:        conf.Addr,
