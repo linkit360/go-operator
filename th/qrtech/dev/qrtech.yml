@@ -1,0 +1,41 @@
+app_name: telco
+
+server:
+  port: 50306
+  threads_count: 1
+
+
+qrtech:
+  name: qrtech
+  mcc: 520
+  dtac_mnc: 05
+  ais_mnc: 01
+  trueh_mnc: 03
+  country_code: 66
+  timeout: 40
+  api_url:
+  location: Asia/Karachi
+  transaction_log:
+    response: /var/log/linkit/response_qrtech.log
+    request: /var/log/linkit/requests_qrtech.log
+  queues:
+    pixels: pixels
+    transaction_log: transaction_log
+
+consumer:
+  reconnect_delay: 10
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
+publisher:
+  chan_capacity: 100
+  pending_buffer_path: /home/centos/linkit/qrtech_pending.json
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+
