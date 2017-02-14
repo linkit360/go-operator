@@ -125,7 +125,10 @@ func (qr *QRTech) mo(c *gin.Context) {
 				r.DelayHours = service.DelayHours
 				r.PaidHours = service.PaidHours
 				r.KeepDays = service.KeepDays
-				r.Periodic = false
+				r.Periodic = true
+				r.PeriodicDays = r.PeriodicDays
+				r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom
+				r.PeriodicAllowedToHours = service.PeriodicAllowedTo
 			}
 			campaign, err := inmem_client.GetCampaignByServiceId(serviceId)
 			if err != nil {
