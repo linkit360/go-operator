@@ -107,3 +107,7 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Beeline.Queue.TransactionLog, 0, body})
 	return nil
 }
+
+func OnExit() {
+	defer svc.transceiver.Close()
+}

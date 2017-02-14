@@ -13,6 +13,7 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
+	inmem_service "github.com/vostrok/inmem/service"
 	"github.com/vostrok/operator/ru/beeline/src/config"
 	m "github.com/vostrok/operator/ru/beeline/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
@@ -33,7 +34,7 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	f := p.Fields()
 	h := p.Header()
 
-	r := rec.Record{
+	r := &rec.Record{
 		Tid:           rec.GenerateTID(),
 		CountryCode:   svc.conf.Beeline.CountryCode,
 		OperatorCode:  svc.conf.Beeline.MccMnc,
@@ -43,7 +44,8 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	}
 	defer logRequests(r.Tid, p, err)
 
-	if err := getCampaign(f[pdufield.DestinationAddr], r); err != nil {
+	_, err = resolveRec(f[pdufield.DestinationAddr], r)
+	if err != nil {
 		return
 	}
 	tlv := p.TLVFields()
@@ -52,8 +54,6 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	case "3": // subscription enabled
 	case "4": // subscritpion disabled
 	case "5": // charge notify. charged <sum> rub. Next date ...
-	// send DELIVER_SM_RESP с CommandStatus = 0, любые другие коды отличные от 0 - отказ Провайдера.
-
 	case "6": // block_subscribtion - unsubscribe
 		unsubscribeAll(r)
 	case "7": // block subscriber
@@ -61,7 +61,55 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	}
 }
 
-func getCampaign(dstAddress string, r *rec.Record) (err error) {
+func acknowledgeChargeNotify(p pdu.Body, service inmem_service.Service, r *rec.Record) (err error) {
+	logCtx := log.WithFields(log.Fields{
+		"tid":    r.Tid,
+		"msisdn": r.Msisdn,
+	})
+	if service.ShortNumber == "" {
+		m.Errors.Inc()
+
+		err = fmt.Errorf("service id %d shortnumber is empty", service.Id)
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cann't process")
+		return
+	}
+	if r.Msisdn == "" {
+		m.Errors.Inc()
+
+		err = fmt.Errorf("no msisdn %s", svc.pduBody(p))
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cann't process")
+		return
+	}
+
+	dr := pdu.NewDeliverSMResp()
+	dr.Fields().Set(pdufield.SourceAddr, service.ShortNumber)
+	dr.Fields().Set(pdufield.DestinationAddr, r.Msisdn)
+	dr.Header().Status = uint32(0)
+	log.Debugf("dr %#v", dr)
+	svc.transceiver.Submit()
+
+	if err == smpp_client.ErrNotConnected {
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cann't process")
+		return fmt.Errorf("smpp.Submit: %s", err.Error())
+	}
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("cann't process")
+		return fmt.Errorf("smpp.Submit: %s", err.Error())
+	}
+}
+
+func resolveRec(dstAddress string, r *rec.Record) (
+	service inmem_service.Service,
+	err error,
+) {
 	logCtx := log.WithField("tid", r.Tid)
 
 	if dstAddress == "" {
@@ -88,25 +136,29 @@ func getCampaign(dstAddress string, r *rec.Record) (err error) {
 	}
 	serviceToken := id[0]
 
-	res, err := inmem_client.GetCampaignByKeyWord(serviceToken)
+	campaign, err := inmem_client.GetCampaignByKeyWord(serviceToken)
 	if err != nil {
 		m.Errors.Inc()
+		err = fmt.Errorf("inmem_client.GetCampaignByKeyWord: %s", err.Error())
 
 		logCtx.WithFields(log.Fields{
 			"serviceToken": serviceToken,
+			"error":        err.Error(),
 		}).Error("cannot find campaign by serviceToken")
 
 		return
 	}
 
-	r.CampaignId = res.Id
-	r.ServiceId = res.ServiceId
-	service, err := inmem_client.GetServiceById(res.ServiceId)
+	r.CampaignId = campaign.Id
+	r.ServiceId = campaign.ServiceId
+	service, err = inmem_client.GetServiceById(campaign.ServiceId)
 	if err != nil {
 		m.Errors.Inc()
 
+		err = fmt.Errorf("inmem_client.GetServiceById: %s", err.Error())
 		logCtx.WithFields(log.Fields{
-			"service_id": res.ServiceId,
+			"service_id": campaign.ServiceId,
+			"error":      err.Error(),
 		}).Error("cannot get service by id")
 		return
 	}
@@ -139,10 +191,10 @@ func (svc *Service) pduBody(p pdu.Body) string {
 	}
 	return string(data)
 }
-func (svc *Service) transactionLog(p pdu.Body, r rec.Record) {
+func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
 	sentAt := time.Now().UTC()
 	f := p.Fields()
-
+	tlv := p.TLVFields()
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
@@ -155,7 +207,7 @@ func (svc *Service) transactionLog(p pdu.Body, r rec.Record) {
 		CampaignId:       r.CampaignId,
 		RequestBody:      svc.pduBody(p),
 		ResponseBody:     "",
-		ResponseDecision: "",
+		ResponseDecision: string(tlv[pdufield.SourcePort].Bytes()),
 		ResponseCode:     200,
 		SentAt:           sentAt,
 		Notice:           f[pdufield.ShortMessage].String(),
@@ -167,7 +219,7 @@ func (svc *Service) transactionLog(p pdu.Body, r rec.Record) {
 func unsubscribeAll(msg rec.Record) error {
 	return _notifyDBAction("UnsubscribeAll", msg)
 }
-func _notifyDBAction(eventName string, msg rec.Record) (err error) {
+func _notifyDBAction(eventName string, msg *rec.Record) (err error) {
 	msg.SentAt = time.Now().UTC()
 	defer func() {
 		if err != nil {
