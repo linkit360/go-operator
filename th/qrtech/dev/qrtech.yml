@@ -13,7 +13,6 @@ qrtech:
   trueh_mnc: 03
   country_code: 66
   timeout: 40
-  api_url:
   location: Asia/Karachi
   transaction_log:
     response: /var/log/linkit/response_qrtech.log
@@ -21,6 +20,13 @@ qrtech:
   queues:
     pixels: pixels
     transaction_log: transaction_log
+    unsubscribe: mt_manager
+    mo: qrtech_mo
+    mt:
+      enabled: true
+      name: qrtech_mt
+      prefetch_count: 10
+      threads_count: 10
 
 consumer:
   reconnect_delay: 10

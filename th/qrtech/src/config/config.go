@@ -11,6 +11,7 @@ import (
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
+	"github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/db"
 )
 
@@ -40,24 +41,29 @@ type QRTechConfig struct {
 	TruehMNC               string               `yaml:"trueh_mnc"`
 	MCC                    string               `yaml:"mcc"`
 	CountryCode            int64                `yaml:"country_code"`
-	Timeout                int                  `default:"30" yaml:"timeout"`
-	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
+	Location               string               `yaml:"location" default:"Asia/Bangkok"`
+	MT                     MTConfig             `yaml:"mt"`
 	MoToken                string               `yaml:"motoken"`
-	Throttle               ThrottleConfig       `yaml:"throttle,omitempty"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  QRTechQueuesConfig   `yaml:"queues"`
 }
-type ThrottleConfig struct {
+type MTConfig struct {
+	APIUrl   string `default:"http://localhost:50306/" yaml:"api_url"`
+	UserName string `default:"kbgames" yaml:"username"`
+	Timeout  int    `default:"30" yaml:"timeout"`
+	RPS      int    `yaml:"rps" default:"30"`
 }
+
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/response_qrtech.log" yaml:"response"`
 	RequestLogPath  string `default:"/var/log/linkit/request_qrtech.log" yaml:"request"`
 }
 type QRTechQueuesConfig struct {
-	MO             string `yaml:"mo" default:"qrtech_mo"`
-	Unsubscribe    string `yaml:"unsubscribe" default:"mt_manager"`
-	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
-	Pixels         string `yaml:"pixels" default:"pixels"`
+	MO             string                    `yaml:"mo" default:"qrtech_mo"`
+	Unsubscribe    string                    `yaml:"unsubscribe" default:"mt_manager"`
+	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
+	Pixels         string                    `yaml:"pixels" default:"pixels"`
+	MT             config.ConsumeQueueConfig `yaml:"mt"`
 }
 
 func LoadConfig() AppConfig {

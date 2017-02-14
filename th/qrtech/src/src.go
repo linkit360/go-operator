@@ -31,7 +31,7 @@ func RunServer() {
 
 	r := gin.New()
 	service.AddTestHandlers(r)
-	service.AddHandlers(r)
+	service.AddMOHandler(r)
 	m.AddHandler(r)
 
 	r.NoRoute(notFound)

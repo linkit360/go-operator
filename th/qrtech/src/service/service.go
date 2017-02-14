@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	amqp_driver "github.com/streadway/amqp"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/th/qrtech/src/config"
@@ -15,10 +16,58 @@ import (
 	pixels "github.com/vostrok/pixels/src/notifier"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/rec"
+	logger "github.com/vostrok/utils/log"
+	rec "github.com/vostrok/utils/rec"
 )
 
 var svc Service
+
+type QRTech struct {
+	conf        config.QRTechConfig
+	Throttle    ThrottleConfig
+	location    *time.Location
+	client      *http.Client
+	responseLog *log.Logger
+	requestLog  *log.Logger
+	mtConsumer  *amqp.Consumer
+	mtChan      <-chan amqp_driver.Delivery
+}
+
+type ThrottleConfig struct {
+	MT <-chan time.Time
+}
+
+func initQRTech(qrTechConf config.QRTechConfig, consumerConfig amqp.ConsumerConfig) *QRTech {
+	qr := &QRTech{
+		conf:        qrTechConf,
+		client:      &http.Client{Timeout: time.Duration(qrTechConf.MT.Timeout) * time.Second},
+		Throttle:    ThrottleConfig{MT: time.Tick(time.Second / time.Duration(qrTechConf.MT.RPS+1))},
+		responseLog: logger.GetFileLogger(qrTechConf.TransactionLogFilePath.ResponseLogPath),
+		requestLog:  logger.GetFileLogger(qrTechConf.TransactionLogFilePath.RequestLogPath),
+	}
+	var err error
+	qr.location, err = time.LoadLocation(qrTechConf.Location)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"location": qrTechConf.Location,
+			"error":    err,
+		}).Fatal("location")
+	}
+
+	qr.mtConsumer = amqp.NewConsumer(consumerConfig, qrTechConf.Queue.MT.Name, qrTechConf.Queue.MT.PrefetchCount)
+	if err := qr.mtConsumer.Connect(); err != nil {
+		log.Fatal("rbmq consumer connect:", err.Error())
+	}
+	amqp.InitQueue(
+		qr.mtConsumer,
+		qr.mtChan,
+		processCharge,
+		qrTechConf.Queue.MT.ThreadsCount,
+		qrTechConf.Queue.MT.Name,
+		qrTechConf.Queue.MT.Name,
+	)
+	return qr
+}
 
 type EventNotify struct {
 	EventName string     `json:"event_name,omitempty"`
@@ -46,25 +95,11 @@ func InitService(
 		QRTech:   qrtechConf,
 	}
 	svc.notifier = amqp.NewNotifier(notifierConfig)
-	svc.API = initQRTech(qrtechConf)
+	svc.API = initQRTech(qrtechConf, consumerConfig)
 
 	if err := inmem_client.Init(inMemConfig); err != nil {
 		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
 	}
-}
-
-func logRequests(requestType string, t rec.Record, req *http.Request, err string) {
-
-	recJson, _ := json.Marshal(t)
-	fields := log.Fields{
-		"url":    req.URL.Path + "/" + req.URL.RawQuery,
-		"rec":    string(recJson),
-		"msisdn": t.Msisdn,
-	}
-	if err != "" {
-		fields["error"] = err
-	}
-	svc.API.requestLog.WithFields(fields).Println(requestType)
 }
 
 func (svc *Service) publishMO(queue string, r rec.Record) error {
@@ -92,13 +127,40 @@ func (svc *Service) publishUnsubscrube(queue string, data interface{}) error {
 	return nil
 }
 
-type Response struct {
-	RequestUrl string
-	Error      string
-	Time       time.Time
-	Decision   string
-	Code       int
-	RawBody    string
+func logRequests(requestType string, t rec.Record, req *http.Request, err string) {
+
+	recJson, _ := json.Marshal(t)
+	fields := log.Fields{
+		"url":    req.URL.Path + "/" + req.URL.RawQuery,
+		"rec":    string(recJson),
+		"msisdn": t.Msisdn,
+	}
+	if err != "" {
+		fields["error"] = err
+	}
+	svc.API.requestLog.WithFields(fields).Println(requestType)
+}
+
+func logResponse(
+	requestType string,
+	t rec.Record,
+	tl transaction_log_service.OperatorTransactionLog,
+	err error,
+) {
+
+	recJson, _ := json.Marshal(t)
+	fields := log.Fields{
+		"type":     requestType,
+		"req":      tl.RequestBody,
+		"body":     tl.ResponseBody,
+		"status":   tl.ResponseCode,
+		"desicion": tl.ResponseDecision,
+		"rec":      string(recJson),
+	}
+	if err != nil {
+		fields["error"] = err.Error()
+	}
+	svc.API.requestLog.WithFields(fields).Println(requestType)
 }
 
 func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTransactionLog) (err error) {

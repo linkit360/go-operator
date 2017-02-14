@@ -2,51 +2,21 @@ package service
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/operator/th/qrtech/src/config"
 	m "github.com/vostrok/operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	logger "github.com/vostrok/utils/log"
 	rec "github.com/vostrok/utils/rec"
-	"strings"
 )
 
-type QRTech struct {
-	conf        config.QRTechConfig
-	Throttle    ThrottleConfig
-	location    *time.Location
-	client      *http.Client
-	responseLog *log.Logger
-	requestLog  *log.Logger
-}
-
-type ThrottleConfig struct {
-}
-
-func AddHandlers(r *gin.Engine) {
+func AddMOHandler(r *gin.Engine) {
 	r.Group("/api").Group("/mo").POST("", svc.API.mo)
-}
-
-// MT handler
-func AddTestHandlers(r *gin.Engine) {
-	//:= r.Group("/qr/mt")
-}
-
-func initQRTech(yConf config.QRTechConfig) *QRTech {
-	y := &QRTech{
-		conf:        yConf,
-		Throttle:    ThrottleConfig{},
-		responseLog: logger.GetFileLogger(yConf.TransactionLogFilePath.ResponseLogPath),
-		requestLog:  logger.GetFileLogger(yConf.TransactionLogFilePath.RequestLogPath),
-	}
-	return y
 }
 
 //
@@ -263,28 +233,4 @@ func (qr *QRTech) mo(c *gin.Context) {
 		}).Info("sent mo")
 	}
 	m.Success.Inc()
-}
-
-// just log and count all requests
-func AccessHandler(c *gin.Context) {
-	begin := time.Now()
-	c.Next()
-	responseTime := time.Since(begin)
-
-	path := c.Request.URL.Path
-	if c.Request.URL.RawQuery != "" {
-		path = path + "?" + c.Request.URL.RawQuery
-
-	}
-	fields := log.Fields{
-		"method": c.Request.Method,
-		"url":    path,
-		"since":  responseTime,
-	}
-	if len(c.Errors) > 0 {
-		fields["error"] = c.Errors.String()
-		log.WithFields(fields).Error("failed")
-	} else {
-		log.WithFields(fields).Info("access")
-	}
 }
