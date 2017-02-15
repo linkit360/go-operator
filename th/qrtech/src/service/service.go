@@ -114,6 +114,18 @@ func (svc *Service) publishMO(queue string, r rec.Record) error {
 	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
 	return nil
 }
+func (svc *Service) publishDN(queue string, r rec.Record) error {
+	event := amqp.EventNotify{
+		EventName: queue,
+		EventData: r,
+	}
+	body, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %s", err.Error())
+	}
+	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
+	return nil
+}
 func (svc *Service) publishUnsubscrube(queue string, data interface{}) error {
 	event := amqp.EventNotify{
 		EventName: "Unsubscribe",

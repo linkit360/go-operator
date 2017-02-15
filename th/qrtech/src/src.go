@@ -29,14 +29,15 @@ func RunServer() {
 	runtime.GOMAXPROCS(nuCPU)
 	log.WithField("CPUCount", nuCPU)
 
-	r := gin.New()
-	service.AddTestHandlers(r)
-	service.AddMOHandler(r)
-	m.AddHandler(r)
+	e := gin.New()
+	service.AddTestHandlers(e)
+	service.AddMOHandler(e)
+	service.AddDNHandler(e)
+	m.AddHandler(e)
 
-	r.NoRoute(notFound)
+	e.NoRoute(notFound)
 
-	r.Run(":" + appConfig.Server.Port)
+	e.Run(":" + appConfig.Server.Port)
 
 	log.WithField("port", appConfig.Server.Port).Info("qrTech init")
 }

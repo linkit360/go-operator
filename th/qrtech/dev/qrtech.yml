@@ -1,4 +1,4 @@
-app_name: telco
+app_name: qrtech
 
 server:
   port: 50306
@@ -27,6 +27,38 @@ qrtech:
       name: qrtech_mt
       prefetch_count: 10
       threads_count: 10
+  dn:
+    code:
+      200: MT delivered successfully
+      100: MT sent to queue successfully
+      500: MT rejected
+      501: Message format error
+      510: Unknown Subscriber
+      511: Subscriber barred
+      512: Subscriber not provisioned or unavailable/ Invalid subscriber
+      520: Operator failure
+      521: Operator having congestion
+      530: Error in charging
+      531: Subscriber does not have enough balance for charging
+      532: Subscriber exceeded allowed usage/frequency
+      550: Other error
+  mt:
+    result:
+      # (positive value) AlphaNumeric string. (Refer as QR MT ID)
+      -10: Invalid parameter msgid
+      -11: Invalid parameter token
+      -12: Invalid parameter operator
+      -13: Invalid parameter shortcode
+      -14: Invalid parameter msisdn
+      -15: Invalid parameter cprefid
+      -17: Invalid parameter ctype
+      -18: Invalid parameter message length
+      -19: Invalid parameter keyword
+      -21: Invalid parameter apitype
+      -23: Invalid parameter subid
+      -24: DB Error
+      -25: Invalid MT URL Form
+
 
 consumer:
   reconnect_delay: 10

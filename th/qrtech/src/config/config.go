@@ -46,6 +46,7 @@ type QRTechConfig struct {
 	MoToken                string               `yaml:"motoken"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  QRTechQueuesConfig   `yaml:"queues"`
+	DN                     DNConfig             `yaml:"dn"`
 }
 type MTConfig struct {
 	APIUrl   string `default:"http://localhost:50306/" yaml:"api_url"`
@@ -54,12 +55,16 @@ type MTConfig struct {
 	RPS      int    `yaml:"rps" default:"30"`
 }
 
+type DNConfig struct {
+	Code map[string]string `yaml:"code"`
+}
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/response_qrtech.log" yaml:"response"`
 	RequestLogPath  string `default:"/var/log/linkit/request_qrtech.log" yaml:"request"`
 }
 type QRTechQueuesConfig struct {
 	MO             string                    `yaml:"mo" default:"qrtech_mo"`
+	DN             string                    `yaml:"dn" default:"qrtech_dn"`
 	Unsubscribe    string                    `yaml:"unsubscribe" default:"mt_manager"`
 	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
 	Pixels         string                    `yaml:"pixels" default:"pixels"`
