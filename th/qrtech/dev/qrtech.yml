@@ -13,7 +13,8 @@ qrtech:
   trueh_mnc: 03
   country_code: 66
   timeout: 40
-  location: Asia/Karachi
+  location: Asia/Bangkok
+  motoken: 1234
   transaction_log:
     response: /var/log/linkit/response_qrtech.log
     request: /var/log/linkit/requests_qrtech.log

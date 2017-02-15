@@ -139,17 +139,10 @@ func (svc *Service) publishUnsubscrube(queue string, data interface{}) error {
 	return nil
 }
 
-func logRequests(requestType string, t rec.Record, req *http.Request, err string) {
-
+func logRequests(requestType string, fields log.Fields, t rec.Record) {
 	recJson, _ := json.Marshal(t)
-	fields := log.Fields{
-		"url":    req.URL.Path + "/" + req.URL.RawQuery,
-		"rec":    string(recJson),
-		"msisdn": t.Msisdn,
-	}
-	if err != "" {
-		fields["error"] = err
-	}
+	fields["type"] = requestType
+	fields["rec"] = string(recJson)
 	svc.API.requestLog.WithFields(fields).Println(requestType)
 }
 

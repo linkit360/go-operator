@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
+	"encoding/json"
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	m "github.com/vostrok/operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
@@ -64,7 +65,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 		}).Error("cannot parse operator code")
 	}
 
-	shortCode, ok := c.GetQuery("shortcode")
+	shortCode, ok := c.GetPostForm("shortcode")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -96,7 +97,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 				r.PaidHours = service.PaidHours
 				r.KeepDays = service.KeepDays
 				r.Periodic = true
-				r.PeriodicDays = r.PeriodicDays
+				r.PeriodicDays = service.PeriodicDays
 				r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom
 				r.PeriodicAllowedToHours = service.PeriodicAllowedTo
 			}
@@ -132,59 +133,62 @@ func (qr *QRTech) mo(c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
 		r.OperatorErr = r.OperatorErr + " no msn"
 	}
-	notice, ok := c.GetQuery("message")
+	notice, ok := c.GetPostForm("message")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find message")
 		r.OperatorErr = r.OperatorErr + " no message"
 	}
-	keyWord, ok := c.GetQuery("keyword")
+	keyWord, ok := c.GetPostForm("keyword")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find keyword")
 		r.OperatorErr = r.OperatorErr + " no keyword"
 	}
-	logCtx.WithFields(log.Fields{
+	f := log.Fields{
 		"operatorCode": operatorCode,
 		"shortCode":    shortCode,
 		"msgid":        r.OperatorToken,
 		"msisdn":       r.Msisdn,
 		"message":      notice,
 		"keyword":      keyWord,
-	}).Info("access")
+	}
+	logCtx.WithFields(f).Info("access")
 
-	moToken, ok := c.GetQuery("motoken")
+	moToken, ok := c.GetPostForm("motoken")
 	if !ok {
 		m.UnAuthorized.Inc()
 		m.Errors.Inc()
-		log.WithFields(log.Fields{}).Error("unauthorized")
+		log.WithFields(log.Fields{"error": "unauthorized"}).Error("cann't find motoken")
 		c.JSON(403, struct{}{})
 		return
 	}
 	if moToken != qr.conf.MoToken {
 		m.UnAuthorized.Inc()
 		m.Errors.Inc()
-		logCtx.WithFields(log.Fields{}).Error("unauthorized")
+		logCtx.WithFields(log.Fields{"error": "unauthorized"}).Error("motoken differs")
 		c.JSON(403, struct{}{})
 		return
 	}
 
 	r.SentAt = time.Now().UTC()
 
-	logRequests("mo", r, c.Request, r.OperatorErr)
+	logRequests("mo", f, r)
+	fieldsBody, _ := json.Marshal(f)
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
 		OperatorToken:    r.OperatorToken,
 		OperatorCode:     r.OperatorCode,
+		OperatorTime:     time.Now().UTC(),
 		CountryCode:      r.CountryCode,
 		Error:            r.OperatorErr,
 		Price:            r.Price,
 		ServiceId:        r.ServiceId,
 		CampaignId:       r.CampaignId,
-		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		RequestBody:      c.Request.URL.Path + "?" + string(fieldsBody),
 		ResponseBody:     "",
 		ResponseDecision: "",
 		ResponseCode:     200,
@@ -194,7 +198,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 	}
 	svc.publishTransactionLog(tl)
 
-	r.Pixel, ok = c.GetQuery("aff_sub")
+	r.Pixel, ok = c.GetPostForm("aff_sub")
 	if ok && len(r.Pixel) >= 4 {
 		log.WithFields(log.Fields{}).Debug("found pixel")
 		svc.notifyPixel(r)

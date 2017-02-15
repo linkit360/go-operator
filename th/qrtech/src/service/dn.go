@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -59,7 +60,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		}).Error("cannot parse operator code")
 	}
 
-	shortCode, ok := c.GetQuery("shortcode")
+	shortCode, ok := c.GetPostForm("shortcode")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -130,33 +131,33 @@ func (qr *QRTech) dn(c *gin.Context) {
 	} else {
 		codeMessage, ok := qr.conf.DN.Code[dnerrorcode]
 		if ok {
-			switch dnerrorcode {
-			case 200:
+			switch {
+			case strings.Contains(dnerrorcode, "200"):
 				m.DN.MTSuccessfull200.Inc()
 				r.Paid = true
-			case 100:
+			case strings.Contains(dnerrorcode, "100"):
 				m.DN.MTSentToQueueSuccessfully100.Inc()
-			case 500:
+			case strings.Contains(dnerrorcode, "500"):
 				m.DN.MTRejected500.Inc()
-			case 501:
+			case strings.Contains(dnerrorcode, "501"):
 				m.DN.MessageFormatError501.Inc()
-			case 510:
+			case strings.Contains(dnerrorcode, "510"):
 				m.DN.UnknownSubscriber510.Inc()
-			case 511:
+			case strings.Contains(dnerrorcode, "511"):
 				m.DN.SubscriberBarred511.Inc()
-			case 512:
+			case strings.Contains(dnerrorcode, "512"):
 				m.DN.SubscriberError512.Inc()
-			case 520:
+			case strings.Contains(dnerrorcode, "520"):
 				m.DN.OperatorFailure520.Inc()
-			case 521:
+			case strings.Contains(dnerrorcode, "521"):
 				m.DN.OperatorCongestion521.Inc()
-			case 530:
+			case strings.Contains(dnerrorcode, "530"):
 				m.DN.ChargingError530.Inc()
-			case 531:
+			case strings.Contains(dnerrorcode, "531"):
 				m.DN.SubscriberNotEnoughBalance531.Inc()
-			case 532:
+			case strings.Contains(dnerrorcode, "532"):
 				m.DN.SubscriberExceededFrequency532.Inc()
-			case 550:
+			case strings.Contains(dnerrorcode, "550"):
 				m.DN.OtherError550.Inc()
 			default:
 				m.DN.UnknownCode.Inc()
@@ -175,7 +176,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
 		r.OperatorErr = r.OperatorErr + " no msn"
 	}
-	bcdate, ok := c.GetQuery("bcdate")
+	bcdate, ok := c.GetPostForm("bcdate")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -195,7 +196,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		operatorTime = time.Now()
 	}
 
-	keyWord, ok := c.GetQuery("keyword")
+	keyWord, ok := c.GetPostForm("keyword")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -203,7 +204,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Warn("cann't find keyword")
 		r.OperatorErr = r.OperatorErr + " no keyword"
 	}
-	logCtx.WithFields(log.Fields{
+	f := log.Fields{
 		"dnid":         r.OperatorToken,
 		"msisdn":       r.Msisdn,
 		"shortCode":    shortCode,
@@ -211,9 +212,11 @@ func (qr *QRTech) dn(c *gin.Context) {
 		"bcdate":       bcdate,
 		"dnerrorcode":  dnerrorcode,
 		"keyword":      keyWord,
-	}).Info("access")
+	}
+	logCtx.WithFields(f).Info("access")
 
-	logRequests("dn", r, c.Request, r.OperatorErr)
+	fieldsBody, _ := json.Marshal(f)
+	logRequests("dn", f, r)
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
@@ -225,7 +228,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		Price:            r.Price,
 		ServiceId:        r.ServiceId,
 		CampaignId:       r.CampaignId,
-		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		RequestBody:      c.Request.URL.Path + "/" + string(fieldsBody),
 		ResponseBody:     "",
 		ResponseDecision: "",
 		ResponseCode:     200,
