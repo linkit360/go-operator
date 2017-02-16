@@ -37,14 +37,14 @@ func (qr *QRTech) testMt(c *gin.Context) {
 	serviceid, _ := c.GetPostForm("serviceid")
 	broadcastdate, _ := c.GetPostForm("broadcastdate")
 	ctype, _ := c.GetPostForm("ctype")
-	message, _ := c.GetPostForm("message")
+	content, _ := c.GetPostForm("content")
 	msisdn, _ := c.GetPostForm("msisdn")
 	f := log.Fields{
 		"userName":      userName,
 		"serviceid":     serviceid,
 		"broadcastdate": broadcastdate,
 		"ctype":         ctype,
-		"message":       message,
+		"content":       content,
 		"msisdn":        msisdn,
 	}
 	log.WithFields(f).Info("access")
@@ -136,8 +136,8 @@ func (qr *QRTech) mt(r rec.Record) (err error) {
 	v.Add("serviceid", strconv.FormatInt(r.ServiceId, 10))
 	v.Add("broadcastdate", time.Now().Format("20060102150405")[:8])
 	v.Add("ctype", "2")                               // unicode type
-	v.Add("message", strconv.QuoteToASCII(r.SMSText)) // when sees any non-ascii type, converts to unicode
-	//v.Add("header", 1) // todo: mandatory?
+	v.Add("content", strconv.QuoteToASCII(r.SMSText)) // when sees any non-ascii type, converts to unicode
+	//v.Add("header", 1) // is not mandatory
 
 	logCtx.WithFields(log.Fields{
 		"url":    qr.conf.MT.APIUrl,
