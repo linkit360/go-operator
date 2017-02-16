@@ -4,6 +4,9 @@ server:
   port: 50306
   threads_count: 1
 
+inmem_client:
+  dsn: 50307
+  timeout: 10
 
 qrtech:
   name: qrtech
@@ -44,6 +47,10 @@ qrtech:
       532: Subscriber exceeded allowed usage/frequency
       550: Other error
   mt:
+    url: http://localhost:50306/qr/mt/failed
+    username: kbgames
+    timeout: 30
+    rps: 30
     result:
       # (positive value) AlphaNumeric string. (Refer as QR MT ID)
       -10: Invalid parameter msgid

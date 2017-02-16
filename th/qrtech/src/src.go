@@ -30,7 +30,7 @@ func RunServer() {
 	log.WithField("CPUCount", nuCPU)
 
 	e := gin.New()
-	service.AddTestHandlers(e)
+	service.AddTestMTHandler(e)
 	service.AddMOHandler(e)
 	service.AddDNHandler(e)
 	m.AddHandler(e)

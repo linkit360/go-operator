@@ -49,10 +49,11 @@ type QRTechConfig struct {
 	DN                     DNConfig             `yaml:"dn"`
 }
 type MTConfig struct {
-	APIUrl   string `default:"http://localhost:50306/" yaml:"api_url"`
-	UserName string `default:"kbgames" yaml:"username"`
-	Timeout  int    `default:"30" yaml:"timeout"`
-	RPS      int    `yaml:"rps" default:"30"`
+	APIUrl     string            `default:"http://localhost:50306/" yaml:"url"`
+	UserName   string            `default:"kbgames" yaml:"username"`
+	Timeout    int               `default:"30" yaml:"timeout"`
+	RPS        int               `yaml:"rps" default:"30"`
+	ResultCode map[string]string `yaml:"result"`
 }
 
 type DNConfig struct {

@@ -20,8 +20,34 @@ import (
 )
 
 // MT handler
-func AddTestHandlers(r *gin.Engine) {
-	//:= r.Group("/qr/mt")
+func AddTestMTHandler(r *gin.Engine) {
+	r.Group("/qr/mt/failed").POST("", svc.API.testMTFailed)
+	r.Group("/qr/mt/ok").POST("", svc.API.testMTOK)
+}
+func (qr *QRTech) testMTFailed(c *gin.Context) {
+	qr.testMt(c)
+	c.Writer.WriteString("result=-11")
+}
+func (qr *QRTech) testMTOK(c *gin.Context) {
+	qr.testMt(c)
+	c.Writer.WriteString("result=11001213")
+}
+func (qr *QRTech) testMt(c *gin.Context) {
+	userName, _ := c.GetPostForm("username")
+	serviceid, _ := c.GetPostForm("serviceid")
+	broadcastdate, _ := c.GetPostForm("broadcastdate")
+	ctype, _ := c.GetPostForm("ctype")
+	message, _ := c.GetPostForm("message")
+	msisdn, _ := c.GetPostForm("msisdn")
+	f := log.Fields{
+		"userName":      userName,
+		"serviceid":     serviceid,
+		"broadcastdate": broadcastdate,
+		"ctype":         ctype,
+		"message":       message,
+		"msisdn":        msisdn,
+	}
+	log.WithFields(f).Info("access")
 }
 
 func processCharge(deliveries <-chan amqp.Delivery) {
@@ -134,6 +160,7 @@ func (qr *QRTech) mt(r rec.Record) (err error) {
 		err = fmt.Errorf("qrTech resp status: %s", resp.Status)
 		return
 	}
+
 	qrTechResponse, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
