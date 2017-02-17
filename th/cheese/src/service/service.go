@@ -74,7 +74,7 @@ func (svc *Service) publishMO(queue string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body, event.EventName})
 	return nil
 }
 
@@ -115,6 +115,6 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.TransactionLog, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.TransactionLog, 0, body, event.EventName})
 	return nil
 }

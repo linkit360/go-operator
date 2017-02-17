@@ -135,7 +135,7 @@ func (svc *Service) publishCallback(data CallbackParameters) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.CallBack.Name, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.CallBack.Name, 0, body, event.EventName})
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (svc *Service) publishMO(data MOParameters) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.MO.Name, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.MO.Name, 0, body, event.EventName})
 	return nil
 }
 
@@ -181,7 +181,7 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.TransactionLog, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.TransactionLog, 0, body, event.EventName})
 	return nil
 }
 
@@ -196,6 +196,6 @@ func (svc *Service) newSubscriptionNotify(msg rec.Record) error {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	queue := queue_config.NewSubscriptionQueueName(svc.conf.Yondu.Name)
-	svc.notifier.Publish(amqp.AMQPMessage{queue, uint8(1), body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue, uint8(1), body, event.EventName})
 	return nil
 }
