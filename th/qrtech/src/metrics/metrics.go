@@ -29,7 +29,10 @@ var (
 
 	TruehSuccess m.Gauge
 	TruehErrors  m.Gauge
-	DN           *DNMetrics
+
+	MTErrors m.Gauge
+
+	DN *DNMetrics
 )
 
 type DNMetrics struct {
@@ -72,6 +75,7 @@ func Init(appName string) {
 	TruehSuccess = m.NewGauge("", appName, "trueh_success", "trueh success")
 	TruehErrors = m.NewGauge("", appName, "trueh_errors", "trueh errors")
 
+	MTErrors = m.NewGauge("", appName, "mt_errors", "mt errors")
 	DN = &DNMetrics{
 		MTSuccessfull200:               m.NewGauge(appName, "dn", "mt_successful", "dn mt_successful"),
 		MTSentToQueueSuccessfully100:   m.NewGauge(appName, "dn", "mt_sent_to_queue_successfully", "mt sent to queue successfully"),
@@ -101,6 +105,7 @@ func Init(appName string) {
 			WrongServiceKey.Update()
 			UnknownOperator.Update()
 			UnAuthorized.Update()
+			MTErrors.Update()
 
 			AisSuccess.Update()
 			AisErrors.Update()

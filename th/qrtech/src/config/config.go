@@ -1,10 +1,15 @@
 package config
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
@@ -42,11 +47,12 @@ type QRTechConfig struct {
 	MCC                    string               `yaml:"mcc"`
 	CountryCode            int64                `yaml:"country_code"`
 	Location               string               `yaml:"location" default:"Asia/Bangkok"`
-	MT                     MTConfig             `yaml:"mt"`
+	InternalsPath          string               `yaml:"internals_path" default:"/home/centos/linkit/qrtech_internals.json"`
 	MoToken                string               `yaml:"motoken"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  QRTechQueuesConfig   `yaml:"queues"`
 	DN                     DNConfig             `yaml:"dn"`
+	MT                     MTConfig             `yaml:"mt"`
 }
 type MTConfig struct {
 	APIUrl     string            `default:"http://localhost:50306/" yaml:"url"`
@@ -55,7 +61,6 @@ type MTConfig struct {
 	RPS        int               `yaml:"rps" default:"30"`
 	ResultCode map[string]string `yaml:"result"`
 }
-
 type DNConfig struct {
 	Code map[string]string `yaml:"code"`
 }
@@ -69,6 +74,59 @@ type QRTechQueuesConfig struct {
 	Unsubscribe    string                    `yaml:"unsubscribe" default:"mt_manager"`
 	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
 	MT             config.ConsumeQueueConfig `yaml:"mt"`
+}
+type InternalsConfig struct {
+	sync.RWMutex
+	MTLastAt map[int64]time.Time `yaml:"mt_last_at"`
+}
+
+func (ic *InternalsConfig) Load(path string) (err error) {
+	ic.Lock()
+	defer ic.Unlock()
+
+	log.WithField("pid", os.Getpid()).Debug("load internals")
+
+	fh, err := os.Open(path)
+	if err != nil {
+		log.WithField("error", err.Error()).Info("cannot open file")
+		return
+	}
+	bufferBytes := bytes.NewBuffer(nil)
+	_, err = io.Copy(bufferBytes, fh)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("cannot copy from")
+		return
+	}
+	if err = fh.Close(); err != nil {
+		log.WithField("error", err.Error()).Error("cannot close fh")
+		return
+	}
+	if err = json.Unmarshal(bufferBytes.Bytes(), ic); err != nil {
+		log.WithField("error", err.Error()).Error("cannot unmarshal")
+		return
+	}
+	log.Debug("read")
+	return
+}
+
+func (ic *InternalsConfig) Save(path string) (err error) {
+	ic.Lock()
+	defer ic.Unlock()
+
+	out, err := json.Marshal(ic)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("cannot marshal")
+		return
+	}
+	fh, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0744)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("cannot save")
+		return
+	}
+	fh.Write(out)
+	fh.Close()
+
+	return nil
 }
 
 func LoadConfig() AppConfig {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	amqp_driver "github.com/streadway/amqp"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/th/qrtech/src/config"
@@ -28,8 +27,6 @@ type QRTech struct {
 	client      *http.Client
 	responseLog *log.Logger
 	requestLog  *log.Logger
-	mtConsumer  *amqp.Consumer
-	mtChan      <-chan amqp_driver.Delivery
 }
 
 type ThrottleConfig struct {
@@ -52,19 +49,7 @@ func initQRTech(qrTechConf config.QRTechConfig, consumerConfig amqp.ConsumerConf
 			"error":    err,
 		}).Fatal("location")
 	}
-
-	qr.mtConsumer = amqp.NewConsumer(consumerConfig, qrTechConf.Queue.MT.Name, qrTechConf.Queue.MT.PrefetchCount)
-	if err := qr.mtConsumer.Connect(); err != nil {
-		log.Fatal("rbmq consumer connect:", err.Error())
-	}
-	amqp.InitQueue(
-		qr.mtConsumer,
-		qr.mtChan,
-		processCharge,
-		qrTechConf.Queue.MT.ThreadsCount,
-		qrTechConf.Queue.MT.Name,
-		qrTechConf.Queue.MT.Name,
-	)
+	go qr.sendMT()
 	return qr
 }
 
@@ -73,10 +58,11 @@ type EventNotify struct {
 	EventData rec.Record `json:"event_data,omitempty"`
 }
 type Service struct {
-	API      *QRTech
-	notifier *amqp.Notifier
-	db       *sql.DB
-	conf     config.ServiceConfig
+	API       *QRTech
+	notifier  *amqp.Notifier
+	db        *sql.DB
+	conf      config.ServiceConfig
+	internals *config.InternalsConfig
 }
 
 func InitService(
@@ -110,7 +96,7 @@ func (svc *Service) publishMO(queue string, r rec.Record) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body, event.EventName})
 	return nil
 }
 func (svc *Service) publishDN(queue string, r rec.Record) error {
@@ -122,7 +108,7 @@ func (svc *Service) publishDN(queue string, r rec.Record) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body, event.EventName})
 	return nil
 }
 func (svc *Service) publishUnsubscrube(queue string, data interface{}) error {
@@ -134,7 +120,7 @@ func (svc *Service) publishUnsubscrube(queue string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue, 0, body, event.EventName})
 	return nil
 }
 
@@ -195,6 +181,6 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.QRTech.Queue.TransactionLog, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.QRTech.Queue.TransactionLog, 0, body, event.EventName})
 	return nil
 }
