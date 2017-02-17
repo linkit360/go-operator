@@ -12,7 +12,6 @@ import (
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/operator/th/cheese/src/config"
 	m "github.com/vostrok/operator/th/cheese/src/metrics"
-	pixels "github.com/vostrok/pixels/src/notifier"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	"github.com/vostrok/utils/rec"
@@ -117,47 +116,5 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.TransactionLog, 0, body})
-	return nil
-}
-
-func (svc *Service) notifyPixel(r rec.Record) (err error) {
-	msg := pixels.Pixel{
-		Tid:            r.Tid,
-		Msisdn:         r.Msisdn,
-		CampaignId:     r.CampaignId,
-		SubscriptionId: r.SubscriptionId,
-		OperatorCode:   r.OperatorCode,
-		CountryCode:    r.CountryCode,
-		Pixel:          r.Pixel,
-		Publisher:      r.Publisher,
-	}
-
-	defer func() {
-		fields := log.Fields{
-			"tid": msg.Tid,
-			"q":   svc.conf.Cheese.Queue.Pixels,
-		}
-		if err != nil {
-			m.NotifyErrors.Inc()
-			m.Errors.Inc()
-
-			fields["errors"] = err.Error()
-			fields["pixel"] = fmt.Sprintf("%#v", msg)
-			log.WithFields(fields).Error("cannot enqueue")
-		} else {
-			log.WithFields(fields).Debug("sent")
-		}
-	}()
-	eventName := "pixels"
-	event := amqp.EventNotify{
-		EventName: eventName,
-		EventData: msg,
-	}
-	body, err := json.Marshal(event)
-	if err != nil {
-		err = fmt.Errorf("json.Marshal: %s", err.Error())
-		return err
-	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.Pixels, uint8(0), body})
 	return nil
 }

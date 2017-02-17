@@ -53,12 +53,8 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/request_cheese.log" yaml:"request"`
 }
 type CheeseQueuesConfig struct {
-	//Ais            config.ConsumeQueueConfig `yaml:"ais"`
-	//Dtac           config.ConsumeQueueConfig `yaml:"dtac"`
-	//Trueh          config.ConsumeQueueConfig `yaml:"trueh"`
 	MO             string `yaml:"mo" default:"cheese_mo"`
 	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
-	Pixels         string `yaml:"pixels" default:"pixels"`
 }
 
 func LoadConfig() AppConfig {

@@ -198,12 +198,6 @@ func (qr *QRTech) mo(c *gin.Context) {
 	}
 	svc.publishTransactionLog(tl)
 
-	r.Pixel, ok = c.GetPostForm("aff_sub")
-	if ok && len(r.Pixel) >= 4 {
-		log.WithFields(log.Fields{}).Debug("found pixel")
-		svc.notifyPixel(r)
-	}
-
 	if strings.Contains(keyWord, "STOP") {
 		if err := svc.publishUnsubscrube(qr.conf.Queue.Unsubscribe, r); err != nil {
 			m.Errors.Inc()

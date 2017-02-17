@@ -22,7 +22,6 @@ qrtech:
     response: /var/log/linkit/response_qrtech.log
     request: /var/log/linkit/requests_qrtech.log
   queues:
-    pixels: pixels
     transaction_log: transaction_log
     unsubscribe: mt_manager
     mo: qrtech_mo

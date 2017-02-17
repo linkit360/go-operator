@@ -230,12 +230,6 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 	}
 	svc.publishTransactionLog(tl)
 
-	r.Pixel, ok = c.GetQuery("aff_sub")
-	if ok && len(r.Pixel) >= 4 {
-		log.WithFields(log.Fields{}).Debug("found pixel")
-		svc.notifyPixel(r)
-	}
-
 	if err := svc.publishMO(cheese.conf.Queue.MO, r); err != nil {
 		m.Errors.Inc()
 

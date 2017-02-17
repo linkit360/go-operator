@@ -68,7 +68,6 @@ type QRTechQueuesConfig struct {
 	DN             string                    `yaml:"dn" default:"qrtech_dn"`
 	Unsubscribe    string                    `yaml:"unsubscribe" default:"mt_manager"`
 	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
-	Pixels         string                    `yaml:"pixels" default:"pixels"`
 	MT             config.ConsumeQueueConfig `yaml:"mt"`
 }
 
