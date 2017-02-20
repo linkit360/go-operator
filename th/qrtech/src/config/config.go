@@ -77,7 +77,7 @@ type QRTechQueuesConfig struct {
 }
 type InternalsConfig struct {
 	sync.RWMutex
-	MTLastAt map[int64]time.Time `yaml:"mt_last_at"`
+	MTLastAt map[int64]time.Time `json:"mt_last_at"`
 }
 
 func (ic *InternalsConfig) Load(path string) (err error) {
@@ -120,12 +120,18 @@ func (ic *InternalsConfig) Save(path string) (err error) {
 	}
 	fh, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0744)
 	if err != nil {
-		log.WithField("error", err.Error()).Error("cannot save")
+		log.WithField("error", err.Error()).Error("cannot open")
 		return
 	}
-	fh.Write(out)
-	fh.Close()
-
+	_, err = fh.Write(out)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("cannot write")
+		return
+	}
+	if err = fh.Close(); err != nil {
+		log.WithField("error", err.Error()).Error("cannot close")
+		return
+	}
 	return nil
 }
 

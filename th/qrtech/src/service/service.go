@@ -79,6 +79,7 @@ func InitService(
 		Notifier: notifierConfig,
 		QRTech:   qrtechConf,
 	}
+	svc.internals = &config.InternalsConfig{}
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.API = initQRTech(qrtechConf, consumerConfig)
 
@@ -128,28 +129,6 @@ func logRequests(requestType string, fields log.Fields, t rec.Record) {
 	recJson, _ := json.Marshal(t)
 	fields["type"] = requestType
 	fields["rec"] = string(recJson)
-	svc.API.requestLog.WithFields(fields).Println(requestType)
-}
-
-func logResponse(
-	requestType string,
-	t rec.Record,
-	tl transaction_log_service.OperatorTransactionLog,
-	err error,
-) {
-
-	recJson, _ := json.Marshal(t)
-	fields := log.Fields{
-		"type":     requestType,
-		"req":      tl.RequestBody,
-		"body":     tl.ResponseBody,
-		"status":   tl.ResponseCode,
-		"desicion": tl.ResponseDecision,
-		"rec":      string(recJson),
-	}
-	if err != nil {
-		fields["error"] = err.Error()
-	}
 	svc.API.requestLog.WithFields(fields).Println(requestType)
 }
 

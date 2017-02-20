@@ -49,7 +49,7 @@ func (qr *QRTech) testMt(c *gin.Context) {
 func (qr *QRTech) sendMT() {
 	for range time.Tick(time.Minute) {
 		if err := svc.internals.Load(svc.conf.QRTech.InternalsPath); err != nil {
-			continue
+			// nothing, continue
 		}
 		log.WithFields(log.Fields{
 			"time": fmt.Sprintf("%#v", svc.internals.MTLastAt),
@@ -67,14 +67,25 @@ func (qr *QRTech) sendMT() {
 		}
 
 		for _, serviceIns := range services {
+			log.WithFields(log.Fields{
+				"service": serviceIns.Id,
+			}).Debug("time last sent MT")
+
 			lastAt, ok := svc.internals.MTLastAt[serviceIns.Id]
 			if ok {
 				if time.Since(lastAt.In(svc.API.location)).Hours() < 24 {
 					log.WithFields(log.Fields{
 						"hours": fmt.Sprintf("%#v", time.Since(lastAt).Hours()),
-					}).Debug("no")
+					}).Debug("skip")
 					continue
 				}
+				log.WithFields(log.Fields{
+					"service": serviceIns.Id,
+				}).Debug("ok with last time")
+			} else {
+				log.WithFields(log.Fields{
+					"service": serviceIns.Id,
+				}).Debug("not found")
 			}
 
 			now := time.Now().In(svc.API.location)
@@ -84,8 +95,21 @@ func (qr *QRTech) sendMT() {
 				if err != nil {
 					m.MTErrors.Inc()
 				} else {
+					log.WithFields(log.Fields{
+						"service": serviceIns.Id,
+					}).Debug("set now")
+					if svc.internals.MTLastAt == nil {
+						svc.internals.MTLastAt = make(map[int64]time.Time)
+					}
 					svc.internals.MTLastAt[serviceIns.Id] = now
 				}
+			} else {
+				log.WithFields(log.Fields{
+					"service":  serviceIns.Id,
+					"interval": interval,
+					"from":     serviceIns.PeriodicAllowedFrom,
+					"to":       serviceIns.PeriodicAllowedTo,
+				}).Debug("not in periodic send interval")
 			}
 		}
 		log.WithFields(log.Fields{
@@ -94,6 +118,7 @@ func (qr *QRTech) sendMT() {
 		if err := svc.internals.Save(svc.conf.QRTech.InternalsPath); err != nil {
 			continue
 		}
+		time.Sleep(time.Second)
 	}
 }
 
@@ -166,7 +191,7 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		CampaignId:       serviceId,
 		RequestBody:      qr.conf.MT.APIUrl + "?" + v.Encode(),
 		ResponseBody:     string(qrTechResponse),
-		ResponseDecision: "",
+		ResponseDecision: operatorToken,
 		ResponseCode:     resp.StatusCode,
 		SentAt:           time.Now().UTC(),
 		Notice:           "",
