@@ -36,7 +36,7 @@ type AppConfig struct {
 	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
 	Publisher amqp.NotifierConfig          `yaml:"publisher"`
 	QRTech    QRTechConfig                 `yaml:"qrtech"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
+	InMem     inmem_client.RPCClientConfig `yaml:"inmem_client"`
 }
 
 type QRTechConfig struct {
