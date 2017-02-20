@@ -20,6 +20,7 @@ var (
 	WrongServiceKey  m.Gauge
 	UnknownOperator  m.Gauge
 	UnAuthorized     m.Gauge
+	Unsibscribe      m.Gauge
 
 	AisSuccess m.Gauge
 	AisErrors  m.Gauge
@@ -65,6 +66,7 @@ func Init(appName string) {
 	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
 	UnknownOperator = m.NewGauge("", appName, "operator_unknown", "unknown operator")
 	UnAuthorized = m.NewGauge("", appName, "unauthorized", "unauthorized")
+	Unsibscribe = m.NewGauge("", appName, "unsubscribe", "unsubscribe")
 
 	AisSuccess = m.NewGauge("", appName, "ais_success", "ais req success")
 	AisErrors = m.NewGauge("", appName, "ais_errors", "ais req errors")
@@ -105,6 +107,7 @@ func Init(appName string) {
 			WrongServiceKey.Update()
 			UnknownOperator.Update()
 			UnAuthorized.Update()
+			Unsibscribe.Update()
 
 			AisSuccess.Update()
 			AisErrors.Update()

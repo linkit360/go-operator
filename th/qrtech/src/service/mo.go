@@ -196,9 +196,9 @@ func (qr *QRTech) mo(c *gin.Context) {
 		Notice:           notice,
 		Type:             "mo",
 	}
-	svc.publishTransactionLog(tl)
 
 	if strings.Contains(keyWord, "STOP") {
+		m.Unsibscribe.Inc()
 		if err := svc.publishUnsubscrube(qr.conf.Queue.Unsubscribe, r); err != nil {
 			m.Errors.Inc()
 
@@ -213,8 +213,11 @@ func (qr *QRTech) mo(c *gin.Context) {
 				"ref":    r.OperatorToken,
 			}).Info("sent unsubscribe")
 		}
+		tl.Notice = "unsubscribe"
+		svc.publishTransactionLog(tl)
 		return
 	}
+	svc.publishTransactionLog(tl)
 
 	if err := svc.publishMO(qr.conf.Queue.MO, r); err != nil {
 		m.Errors.Inc()

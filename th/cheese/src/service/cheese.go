@@ -15,6 +15,7 @@ import (
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	logger "github.com/vostrok/utils/log"
 	rec "github.com/vostrok/utils/rec"
+	"strings"
 )
 
 type Cheese struct {
@@ -181,7 +182,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Warn("cann't find channel")
 		r.OperatorErr = r.OperatorErr + " no chn"
 	}
-	_, ok = c.GetQuery("acs")
+	acs, ok := c.GetQuery("acs")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -227,6 +228,27 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		SentAt:           r.SentAt,
 		Notice:           notice,
 		Type:             "mo",
+	}
+
+	if strings.Contains(acs, "UNREG") {
+		m.Unsibscribe.Inc()
+		if err := svc.publishUnsubscrube(r); err != nil {
+			m.Errors.Inc()
+
+			logCtx.WithFields(log.Fields{
+				"p":     fmt.Sprintf("%#v", r),
+				"error": err.Error(),
+			}).Error("sent unsubscribe failed")
+		} else {
+			logCtx.WithFields(log.Fields{
+				"msisdn": r.Msisdn,
+				"tid":    r.Tid,
+				"ref":    r.OperatorToken,
+			}).Info("sent unsubscribe")
+		}
+		tl.Notice = "unsubscribe"
+		svc.publishTransactionLog(tl)
+		return
 	}
 	svc.publishTransactionLog(tl)
 

@@ -55,6 +55,7 @@ type TransactionLogConfig struct {
 type CheeseQueuesConfig struct {
 	MO             string `yaml:"mo" default:"cheese_mo"`
 	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
+	Unsubscribe    string `yaml:"unsubscribe" default:"mt_manager"`
 }
 
 func LoadConfig() AppConfig {

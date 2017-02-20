@@ -118,3 +118,16 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.TransactionLog, 0, body, event.EventName})
 	return nil
 }
+
+func (svc *Service) publishUnsubscrube(r rec.Record) error {
+	event := amqp.EventNotify{
+		EventName: "Unsubscribe",
+		EventData: r,
+	}
+	body, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %s", err.Error())
+	}
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Cheese.Queue.Unsubscribe, 0, body, event.EventName})
+	return nil
+}

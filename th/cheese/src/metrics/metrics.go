@@ -19,6 +19,7 @@ var (
 	MOParseTimeError m.Gauge
 	WrongServiceKey  m.Gauge
 	UnknownOperator  m.Gauge
+	Unsibscribe      m.Gauge
 
 	AisSuccess m.Gauge
 	AisErrors  m.Gauge
@@ -42,6 +43,7 @@ func Init(appName string) {
 	MOParseTimeError = m.NewGauge("", appName, "mo_parse_time_errors", "parse time errors")
 	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
 	UnknownOperator = m.NewGauge("", appName, "unknown_operator", "unknown operator")
+	Unsibscribe = m.NewGauge("", appName, "unsubscribe", "unsubscribe")
 
 	AisSuccess = m.NewGauge("", appName, "ais_success", "ais req success")
 	AisErrors = m.NewGauge("", appName, "ais_errors", "ais req errors")
@@ -64,6 +66,7 @@ func Init(appName string) {
 			MOParseTimeError.Update()
 			WrongServiceKey.Update()
 			UnknownOperator.Update()
+			Unsibscribe.Update()
 
 			AisSuccess.Update()
 			AisErrors.Update()
