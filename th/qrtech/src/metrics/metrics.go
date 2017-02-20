@@ -3,7 +3,7 @@ package metrics
 import (
 	"time"
 
-	//"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 
 	m "github.com/vostrok/utils/metrics"
 )
@@ -30,7 +30,7 @@ var (
 	TruehSuccess m.Gauge
 	TruehErrors  m.Gauge
 
-	MTErrors m.Gauge
+	MTErrors prometheus.Gauge
 
 	DN *DNMetrics
 )
@@ -75,7 +75,7 @@ func Init(appName string) {
 	TruehSuccess = m.NewGauge("", appName, "trueh_success", "trueh success")
 	TruehErrors = m.NewGauge("", appName, "trueh_errors", "trueh errors")
 
-	MTErrors = m.NewGauge("", appName, "mt_errors", "mt errors")
+	MTErrors = m.PrometheusGauge("", appName, "mt_errors", "mt errors")
 	DN = &DNMetrics{
 		MTSuccessfull200:               m.NewGauge(appName, "dn", "mt_successful", "dn mt_successful"),
 		MTSentToQueueSuccessfully100:   m.NewGauge(appName, "dn", "mt_sent_to_queue_successfully", "mt sent to queue successfully"),
@@ -105,7 +105,6 @@ func Init(appName string) {
 			WrongServiceKey.Update()
 			UnknownOperator.Update()
 			UnAuthorized.Update()
-			MTErrors.Update()
 
 			AisSuccess.Update()
 			AisErrors.Update()

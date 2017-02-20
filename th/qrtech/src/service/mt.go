@@ -52,8 +52,8 @@ func (qr *QRTech) sendMT() {
 			// nothing, continue
 		}
 		log.WithFields(log.Fields{
-			"time": fmt.Sprintf("%#v", svc.internals.MTLastAt),
-		}).Debug("time last sent MT")
+			"len": len(svc.internals.MTLastAt),
+		}).Debug("loaded internals")
 
 		services, err := inmem_client.GetAllServices()
 		if err != nil {
@@ -62,20 +62,22 @@ func (qr *QRTech) sendMT() {
 			log.WithFields(log.Fields{
 				"err": err.Error(),
 			}).Error("cannot get all services")
-			m.MTErrors.Inc()
 			return
 		}
 
+		errorFlag := false
 		for _, serviceIns := range services {
 			log.WithFields(log.Fields{
 				"service": serviceIns.Id,
-			}).Debug("time last sent MT")
+			}).Debug("process service..")
 
 			lastAt, ok := svc.internals.MTLastAt[serviceIns.Id]
 			if ok {
 				if time.Since(lastAt.In(svc.API.location)).Hours() < 24 {
 					log.WithFields(log.Fields{
-						"hours": fmt.Sprintf("%#v", time.Since(lastAt).Hours()),
+						"service": serviceIns.Id,
+						"last":    lastAt,
+						"hours":   fmt.Sprintf("%#v", time.Since(lastAt).Hours()),
 					}).Debug("skip")
 					continue
 				}
@@ -93,7 +95,8 @@ func (qr *QRTech) sendMT() {
 			if serviceIns.PeriodicAllowedFrom < interval && serviceIns.PeriodicAllowedTo >= interval {
 				err := qr.mt(serviceIns.Id, serviceIns.SendContentTextTemplate)
 				if err != nil {
-					m.MTErrors.Inc()
+					m.MTErrors.Set(1)
+					errorFlag = true
 				} else {
 					log.WithFields(log.Fields{
 						"service": serviceIns.Id,
@@ -112,13 +115,17 @@ func (qr *QRTech) sendMT() {
 				}).Debug("not in periodic send interval")
 			}
 		}
-		log.WithFields(log.Fields{
-			"time": svc.internals.MTLastAt,
-		}).Debug("save time last sent MT")
-		if err := svc.internals.Save(svc.conf.QRTech.InternalsPath); err != nil {
-			continue
+
+		if !errorFlag {
+			m.MTErrors.Set(0)
+			log.WithFields(log.Fields{
+				"time": svc.internals.MTLastAt,
+			}).Debug("overall services: save time last sent MT")
+			if err := svc.internals.Save(svc.conf.QRTech.InternalsPath); err != nil {
+				continue
+			}
+			time.Sleep(time.Second)
 		}
-		time.Sleep(time.Second)
 	}
 }
 
@@ -171,12 +178,24 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		"response": result,
 	}).Debug("got response")
 
-	operatorToken, negativeAnswer := svc.API.conf.MT.ResultCode[result]
-	if !negativeAnswer {
-		logCtx.WithFields(log.Fields{}).Debug("ok")
+	operatorToken := ""
+	if _, err = strconv.Atoi(result); err != nil {
+		logCtx.WithFields(log.Fields{
+			"response": result,
+		}).Error("unknown response")
+		return
 	} else {
-		m.MTErrors.Inc()
-		logCtx.WithFields(log.Fields{}).Error(operatorToken)
+		var negativeAnswer bool
+		operatorToken, negativeAnswer = svc.API.conf.MT.ResultCode[result]
+		if !negativeAnswer {
+			logCtx.WithFields(log.Fields{
+				"token": operatorToken,
+			}).Debug("ok")
+		} else {
+			err = fmt.Errorf("Operator Error Code: %s", operatorToken)
+			logCtx.WithFields(log.Fields{}).Error(operatorToken)
+			return
+		}
 	}
 
 	operatorErr := ""
