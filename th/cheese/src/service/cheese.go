@@ -175,7 +175,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
 		r.OperatorErr = r.OperatorErr + " no msn"
 	}
-	notice, ok := c.GetQuery("chn")
+	_, ok = c.GetQuery("chn")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -226,11 +226,11 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		ResponseDecision: "",
 		ResponseCode:     200,
 		SentAt:           r.SentAt,
-		Notice:           notice,
+		Notice:           acs,
 		Type:             "mo",
 	}
 
-	if strings.Contains(acs, "UNREG") {
+	if strings.Contains(acs, "UNREG") || strings.Contains(acs, "unreg") {
 		m.Unsibscribe.Inc()
 		if err := svc.publishUnsubscrube(r); err != nil {
 			m.Errors.Inc()
