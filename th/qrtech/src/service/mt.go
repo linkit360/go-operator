@@ -149,13 +149,18 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		"params": v.Encode(),
 	}).Debug("call...")
 
-	req, err := http.NewRequest("POST", qr.conf.MT.APIUrl, strings.NewReader(v.Encode()))
+	req, err := http.NewRequest("POST", qr.conf.MT.APIUrl+"?"+v.Encode(), strings.NewReader(v.Encode()))
 	if err != nil {
 		err = fmt.Errorf("Cann't create request: %s", err.Error())
 		return
 	}
+	req.Header.Add("User-Agent", "linkit")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.PostForm = v
 	req.Close = false
 
+	// write(9, "POST /QRPartner_API/linkit360/insertContent.php HTTP/1.1\r\nHost: funspaz.com\r\nUser-Agent: Go-http-client/1.1\r\nContent-Length: 154\r\nAccept-Encoding: gzip\r\n\r\nbroadcastdate=20170221&content=%22You+can+got+it+here%3A+http%3A%2F%2Fplatform.th.linkit360.ru%2Fu%2Fget%22&ctype=2&serviceid=421924601&username=LinkIT360", 309) = 309
+	// read(9, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nServer: Microsoft-IIS/7.5\r\nX-Powered-By: ASP.NET\r\nX-Powered-By-Plesk: PleskWin\r\nDate: Tue, 21 Feb 2017 09:31:41 GMT\r\nConnection: close\r\nContent-Length: 21\r\n\r\nInvalid Request Form!", 4096) = 221
 	resp, err = qr.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("Cann't make request: %s", err.Error())
