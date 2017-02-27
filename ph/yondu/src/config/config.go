@@ -27,44 +27,41 @@ type ServerConfig struct {
 type AppConfig struct {
 	AppName   string                       `yaml:"app_name"`
 	Server    ServerConfig                 `yaml:"server"`
+	Yondu     YonduConfig                  `yaml:"yondu"`
 	DB        db.DataBaseConfig            `yaml:"db"`
 	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
 	Publisher amqp.NotifierConfig          `yaml:"publisher"`
-	Yondo     YonduConfig                  `yaml:"yondu"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
+	InMem     inmem_client.RPCClientConfig `yaml:"inmem_client"`
 }
 
 type YonduConfig struct {
 	Name                   string               `yaml:"name"`
-	AuthToken              string               `yaml:"token"`
-	Timeout                int                  `default:"30" yaml:"timeout"`
+	AuthKey                string               `yaml:"auth_key"`
 	APIUrl                 string               `default:"http://localhost:50306/" yaml:"api_url"`
+	Timeout                int                  `default:"30" yaml:"timeout"`
 	Throttle               ThrottleConfig       `yaml:"throttle"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
-	ResponseCode           map[string]string    `yaml:"response_code"`
+	MTResponseCode         map[string]string    `yaml:"mt_code"`
+	DNResponseCode         map[string]string    `yaml:"dn_code"`
+	TariffCode             map[string]string    `yaml:"tariff"`
 	Queue                  YonduQueuesConfig    `yaml:"queues"`
-	Tariffs                map[int]string       `yaml:"tariffs"`
 }
 type ThrottleConfig struct {
-	MT      int `yaml:"mt" default:"10"`
-	Consent int `yaml:"consent" default:"10"`
-	Charge  int `yaml:"charge" default:"10"`
+	MT int `yaml:"mt" default:"10"`
 }
 type TransactionLogConfig struct {
 	ResponseLogPath string `default:"/var/log/linkit/yondu_response.log" yaml:"response"`
 	RequestLogPath  string `default:"/var/log/linkit/yondu_request.log" yaml:"request"`
 }
 type YonduQueuesConfig struct {
-	SendConsent    config.ConsumeQueueConfig `yaml:"consent"`
-	Charge         config.ConsumeQueueConfig `yaml:"charge"`
-	MT             config.ConsumeQueueConfig `yaml:"mt"`
-	CallBack       config.ConsumeQueueConfig `yaml:"callback"`
-	MO             config.ConsumeQueueConfig `yaml:"mo"`
+	MO             string                    `yaml:"mo"`
+	DN             string                    `yaml:"dn"`
 	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
+	MT             config.ConsumeQueueConfig `yaml:"mt"`
 }
 
 func LoadConfig() AppConfig {
-	cfg := flag.String("config", "dev/yondo.yml", "configuration yml file")
+	cfg := flag.String("config", "dev/yondu.yml", "configuration yml file")
 	flag.Parse()
 	var appConfig AppConfig
 
@@ -84,10 +81,10 @@ func LoadConfig() AppConfig {
 	appConfig.Consumer.Conn.Host = envString("RBMQ_HOST", appConfig.Consumer.Conn.Host)
 	appConfig.Publisher.Conn.Host = envString("RBMQ_HOST", appConfig.Publisher.Conn.Host)
 
-	appConfig.Yondo.TransactionLogFilePath.ResponseLogPath =
-		envString("RESPONSE_LOG", appConfig.Yondo.TransactionLogFilePath.ResponseLogPath)
-	appConfig.Yondo.TransactionLogFilePath.RequestLogPath =
-		envString("REQUEST_LOG", appConfig.Yondo.TransactionLogFilePath.RequestLogPath)
+	appConfig.Yondu.TransactionLogFilePath.ResponseLogPath =
+		envString("RESPONSE_LOG", appConfig.Yondu.TransactionLogFilePath.ResponseLogPath)
+	appConfig.Yondu.TransactionLogFilePath.RequestLogPath =
+		envString("REQUEST_LOG", appConfig.Yondu.TransactionLogFilePath.RequestLogPath)
 
 	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig

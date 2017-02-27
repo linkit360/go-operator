@@ -37,3 +37,10 @@ charge:
 	curl -v "http://52.76.96.115/m360api/v1/charging/9175256925/P1"
 
 # curl -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMyIsImlzcyI6Imh0dHA6XC9cLzUyLjc2Ljk2LjExNVwvbTM2MGFwaVwvYXBpXC9hdXRoZW50aWNhdGUiLCJpYXQiOjE0NzA2MzQ2NjcsImV4cCI6MTUwMjE3MDY2NywibmJmIjoxNDcwNjM0NjY3LCJqdGkiOiJkMTBjZGFjYmZmNjVhYzZmOThkNTE4OGMyZWRmY2VkMiJ9.5U1tkrbjw3mn1Y7fZt2mouSHTLZTVx6EFauIpG3ovok'  -v "http://52.76.96.115/m360api/v1/charging/639175256925/P1"
+# curl -v "http://52.76.96.115/?key=26a339971a34cc3f4c835e16ccc642a77a3a0063373dd9cd58bf26d2c02309d8&msisdn=9171234567&keyword=play_250&message=Here+is+the+link%3A+http%3A%2F%2Fdev.pk.linkit360.ru%2Funiq%2FTNZPMRlB8&rrn=abcd1234"
+
+# 9178626134
+# curl -v "http://162.209.29.190/xportal/partner-2656.php?key=26a339971a34cc3f4c835e16ccc642a77a3a0063373dd9cd58bf26d2c02309d8&msisdn=9178626134&keyword=play_250&message=Here+is+the+link%3A+http%3A%2F%2Fdev.pk.linkit360.ru%2Funiq%2FTNZPMRlB8&rrn=1488214508"
+# //curl -v "http://162.209.29.190/xportal/partner-2656.php?key=26a339971a34cc3f4c835e16ccc642a77a3a0063373dd9cd58bf26d2c02309d8&msisdn=9951502420&keyword=play_00&message=Here+is+the+link%3A+http%3A%2F%2Fdev.pk.linkit360.ru%2Funiq%2FTNZPMRlB8&rrn=1488218310"
+# http://platform.ph.linkit360.ru/api/mo?telco=globe&msisdn=9171234567&message=sample%20keyword&rrn=abcd1234
+# http://platform.ph.linkit360.ru/api/dn?telco=globe&msisdn=9171234567&status=success&code=200&rrn=abcd1234&timestamp=1486527412

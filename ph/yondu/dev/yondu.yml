@@ -2,95 +2,54 @@ app_name: telco
 
 server:
   port: 50306
-  threads_count: 1
 
 inmem_client:
-  dsn: 50307
+  dsn: :50307
   timeout: 10
 
 yondu:
   name: yondu
   timeout: 40
   api_url: http://localhost:50306/yondu
+#  api_url: http://162.209.29.190/xportal/partner-2656.php
+  auth_key: 26a339971a34cc3f4c835e16ccc642a77a3a0063373dd9cd58bf26d2c02309d
   location: Asia/Karachi
   throttle:
-      charge: 1
       mt: 1
-      consent: 1
   transaction_log:
     response: /var/log/linkit/response_yondu.log
     request: /var/log/linkit/requests_yondu.log
-  response_code:
-    2001: verification sent
-    2002: invalid mobile number
-    2003: verification successful
-    2004: invalid code combination
-    2005: charged failed
-    2006: successfully processed
-    2007: invalid tariff
+  mt_code:
+    200: Successfully received the request and ready to process
+    400: Invalid key / Incomplete Parameters / Invalid Keyword
+    500: Write Error
+  tariff:
+    250: play_250 # for 2.50 tariff (charging only)
+    1000: play_1000 # for 10.00 tariff (charging only)
+    2000: play_2000 # for 20.00 tariff (charging only)
+    0: play_00: # for 0.00 tariff or free (sending content only)
+  dn_code:
+    200: Success. Successfully charged
+    201: Success. Successfully charged
+    400: Authentication Error. Credentials error to telco
+    401: Subscriber not found
+    402: Subscriber mobile number is not active
+    411: GHP Subscriber has insufficient balance Insufficient balance to all Prepaid/GHP subscribers
+    412: EricssonInsuffBal.  Insufficient balance to all Touch Mobile subscribers
+    414: StatusInactive. Postpaid subscriber is inactive
+    416: ServerError. Current service is down or inactive
+    500: ReadTimeout. Current service is down or inactive
+    503: CSP Error. Telco problem to connect in CSP platform / App is not provisioned for charging or this rate / Charging amount is not provision / System is busy / Connection problem to telco
+    1001: No Response. Cannot connect Telco API after 3 attempts
+    1002: Connection Refused. Cannot access Telco API
   queues:
     transaction_log: transaction_log
-    consent:
-      name: yondu_consent
-      prefetch_count:
-      threads_count:
-    charge:
-      name: yondu_charge
-      prefetch_count: 50
-      threads_count: 10
+    mo: yondu_mo
+    dn: yondu_dn
     mt:
       name: yondu_mt
       prefetch_count: 50
       threads_count: 10
-    callback:
-      name: yondu_callback
-      prefetch_count: 50
-      threads_count: 10
-    mo:
-      name: yondu_mo
-      prefetch_count: 50
-      threads_count: 10
-  tariffs:
-    1: P1
-    2.50: P250
-    5: P5
-    10:	10
-    15:	15
-    20:	20
-    25:	25
-    30:	30
-    35:	35
-    40:	40
-    45:	45
-    50:	50
-    55:	55
-    60:	60
-    65:	65
-    70:	70
-    75:	75
-    80:	80
-    85:	85
-    90:	95
-    100:	100
-    150:	150
-    200:	200
-    250:	250
-    300:	300
-    350:	350
-    400:	400
-    450:	450
-    500:	500
-    550:	550
-    600:	600
-    650:	650
-    700:	700
-    750:	750
-    800:	800
-    850:	850
-    900:	900
-    950:	950
-    1000:	1000
-  token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMyIsImlzcyI6Imh0dHA6XC9cLzUyLjc2Ljk2LjExNVwvbTM2MGFwaVwvYXBpXC9hdXRoZW50aWNhdGUiLCJpYXQiOjE0NzA2MzQ2NjcsImV4cCI6MTUwMjE3MDY2NywibmJmIjoxNDcwNjM0NjY3LCJqdGkiOiJkMTBjZGFjYmZmNjVhYzZmOThkNTE4OGMyZWRmY2VkMiJ9.5U1tkrbjw3mn1Y7fZt2mouSHTLZTVx6EFauIpG3ovok
 
 consumer:
   reconnect_delay: 10

@@ -1,11 +1,11 @@
 package service
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -18,6 +18,9 @@ import (
 	"github.com/vostrok/utils/rec"
 )
 
+// Yondu API implements:
+// DN, MO, XPortal Partner API requests
+
 type Yondu struct {
 	conf        config.YonduConfig
 	Throttle    ThrottleConfig
@@ -28,51 +31,32 @@ type Yondu struct {
 }
 
 type ThrottleConfig struct {
-	MT      <-chan time.Time
-	Consent <-chan time.Time
-	Charge  <-chan time.Time
+	MT <-chan time.Time
 }
 
 func AddHandlers(r *gin.Engine) {
 	tgYonduAPI := r.Group("/api/")
 	tgYonduAPI.Group("/mo").GET("", AccessHandler, svc.YonduAPI.MO)
-	tgYonduAPI.Group("/callback").GET("", AccessHandler, svc.YonduAPI.Callback)
+	tgYonduAPI.Group("/dn").GET("", AccessHandler)
 }
 func AddTestHandlers(r *gin.Engine) {
 	tgYonduAPI := r.Group("/yondu/")
-	tgYonduAPI.Group("/charging").GET("/:msisdn/:amount", AccessHandler, svc.YonduAPI.charge)
-	tgYonduAPI.Group("/consent").GET("/:msisdn/:amount", AccessHandler, svc.YonduAPI.consent)
-	tgYonduAPI.Group("/invalid").GET("/:msisdn/:text", AccessHandler, svc.YonduAPI.invalid)
+	tgYonduAPI.Group("/mt").GET("", AccessHandler, svc.YonduAPI.testAPIcallMT)
 }
-func (y *Yondu) charge(c *gin.Context) {
+func (y *Yondu) testAPIcallMT(c *gin.Context) {
 	c.Writer.WriteHeader(200)
-	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
+	c.Writer.Write([]byte(`{"status_code":200,"msg":"Success."}`))
 }
-func (y *Yondu) consent(c *gin.Context) {
-	c.Writer.WriteHeader(200)
-	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2001"}}`))
-}
-func (y *Yondu) invalid(c *gin.Context) {
-	c.Writer.WriteHeader(200)
-	c.Writer.Write([]byte(`{"response":{"message":"verification sent","code":"2006"}}`))
-}
-
 func initYondu(yConf config.YonduConfig) *Yondu {
 	y := &Yondu{
 		conf: yConf,
 		Throttle: ThrottleConfig{
-			MT:      time.Tick(time.Second / time.Duration(yConf.Throttle.MT+1)),
-			Consent: time.Tick(time.Second / time.Duration(yConf.Throttle.Consent+1)),
-			Charge:  time.Tick(time.Second / time.Duration(yConf.Throttle.Charge+1)),
+			MT: time.Tick(time.Second / time.Duration(yConf.Throttle.MT+1)),
 		},
 		responseLog: logger.GetFileLogger(yConf.TransactionLogFilePath.ResponseLogPath),
 		requestLog:  logger.GetFileLogger(yConf.TransactionLogFilePath.RequestLogPath),
 	}
 	return y
-}
-func basicAuth(username, password string) string {
-	auth := username + ":" + password
-	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 type YonduResponseExtended struct {
@@ -85,115 +69,64 @@ type YonduResponseExtended struct {
 }
 
 type YonduResponse struct {
-	Response struct {
-		Message string `json:"message,omitempty"`
-		Code    string `json:"code,omitempty"`
-	} `json:"response"`
+	Message string `json:"msg,omitempty"`
+	Code    string `json:"status_code,omitempty"`
 }
 
-//API URL: {URL}/m360api/v1/consent/{msisdn}/{amount}
-//Description: To send transaction code as consent before charging the subscriber
-//Method: GET
-//Headers: Authorization: Bearer {token}
-//Required parameters: msisdn, amount
-//Sample Response: {"response":{"message":"verification sent","code":"2001"}}
-//Sample Request: {URL}/m360api/v1/consent/9171234567/P1
-func (y *Yondu) SendConsent(tid, msisdn, amount string) (yR YonduResponseExtended, err error) {
-	if err = checkOurParameters(msisdn, amount); err != nil {
-		m.Errors.Inc()
-		m.SentConsentErrors.Inc()
-		return
-	}
+// sends charge request and if the msisdn successfully charged, then sends content from the message
+//{URL}?key={key}&msisdn={msisdn}&keyword={keyword}&message={message}&rrn={rrn }
+// /api/dn?telco=globe&msisdn=9951502420&rrn=1488218310&status=SUCCESS&code=201&timestamp=1488189660
+func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 	begin := time.Now()
-	yR, err = y.call(tid, y.conf.APIUrl+"/consent/"+msisdn[2:]+"/"+amount, 2001)
-	m.ConsentDuration.Observe(time.Since(begin).Seconds())
-	if err == nil {
-		m.Success.Inc()
-		m.SentConsentSuccess.Inc()
-	} else {
-		m.Errors.Inc()
-		m.SentConsentErrors.Inc()
-	}
-	return
-}
-
-//API URL: {URL}/m360api/v1/charging/{msisdn}/{amount}
-//Description: To directly charge the subscriber without sending a consent
-//Method: GET
-//Headers: Authorization: Bearer {token}
-//Required parameters: msisdn, amount
-//Response: {"response":{"message":"successfully processed","code":"2006"}}
-//Sample Request: {URL}/m360api/v1/charging/9171234567/P1
-func (y *Yondu) Charge(tid, msisdn, amount string) (yR YonduResponseExtended, err error) {
-	if err = checkOurParameters(msisdn, amount); err != nil {
-		m.Errors.Inc()
-		m.ChargeRequestErrors.Inc()
-		return
-	}
-	begin := time.Now()
-	yR, err = y.call(tid, y.conf.APIUrl+"/charging/"+msisdn[2:]+"/"+amount, 2006)
-	m.ChargeDuration.Observe(time.Since(begin).Seconds())
-	if err == nil {
-		m.Success.Inc()
-		m.ChargeRequestSuccess.Inc()
-	} else {
-		m.Errors.Inc()
-		m.ChargeRequestErrors.Inc()
-	}
-	return
-}
-
-//API URL:  {URL}/m360api/v1/invalid/{msisdn}/{content}
-//Description: To send SMS to the subscriber based from your content
-//Method: GET
-//Headers: Authorization: Bearer {token}
-//Required parameters: msisdn
-//Sample Request: {URL}/m360api/v1/invalid/9171234567/Hello world!
-func (y *Yondu) MT(tid, msisdn, text string) (yR YonduResponseExtended, err error) {
-	if err = checkOurParameters(msisdn, text); err != nil {
-		m.Errors.Inc()
-		m.MTRequestErrors.Inc()
-		return
-	}
-	begin := time.Now()
-	yR, err = y.call(tid, y.conf.APIUrl+"/invalid/"+msisdn[2:]+"/"+text, 2006)
-	m.MTDuration.Observe(time.Since(begin).Seconds())
-	if err == nil {
-		m.Success.Inc()
-		m.MTRequestSuccess.Inc()
-	} else {
-		m.Errors.Inc()
-		m.MTRequestErrors.Inc()
-	}
-	return
-}
-func checkOurParameters(msisdn, second string) error {
-	if msisdn == "" {
-		return fmt.Errorf("Empty msisdn %s", msisdn)
-	}
-	if second == "" {
-		return fmt.Errorf("Empty text/amount%s", "")
-	}
-	return nil
-}
-
-func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExtended, err error) {
 	logCtx := log.WithFields(log.Fields{
-		"tid": tid,
-		"url": url,
+		"tid": r.Tid,
 	})
+	v := url.Values{}
+	v.Add("key", y.conf.AuthKey)
+	v.Add("msisdn", r.Msisdn)
+
+	if r.SMSText != "" {
+		code, ok := y.conf.TariffCode["0"]
+		if !ok {
+			logCtx.WithFields(log.Fields{
+				"error": "cann't find code to send content",
+			}).Error("cannot process")
+			m.WrongTariff.Inc()
+			m.Errors.Inc()
+			m.MTRequestErrors.Inc()
+			return
+		}
+		v.Add("keyword", code)
+		v.Add("message", r.SMSText)
+	} else {
+		code, ok := y.conf.TariffCode[strconv.Itoa(r.Price)]
+		if !ok {
+			logCtx.WithFields(log.Fields{
+				"error": "cann't find code for price",
+				"price": r.Price,
+			}).Error("cannot process")
+			m.WrongTariff.Inc()
+			m.Errors.Inc()
+			m.MTRequestErrors.Inc()
+			return
+		}
+		v.Add("keyword", code)
+	}
+
+	apiUrl := y.conf.APIUrl + "?" + v.Encode()
+
 	defer func() {
-		yonduResponse.RequestUrl = url
-		yonduResponse.ResponseTime = time.Now().UTC()
+		yR.RequestUrl = apiUrl
+		yR.ResponseTime = time.Now().UTC()
 		if err != nil {
-			yonduResponse.ResponseError = err.Error()
+			yR.ResponseError = err.Error()
 		}
 	}()
 	y.client = &http.Client{
 		Timeout: time.Duration(y.conf.Timeout) * time.Second,
 	}
 	var req *http.Request
-	req, err = http.NewRequest("GET", url, nil)
+	req, err = http.NewRequest("GET", apiUrl, nil)
 	if err != nil {
 		err = fmt.Errorf("http.NewRequest: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -201,7 +134,6 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		}).Error("cannot process")
 		return
 	}
-	req.Header.Set("Authorization", "Bearer "+y.conf.AuthToken)
 	req.Close = false
 
 	var resp *http.Response
@@ -213,7 +145,7 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		}).Error("cannot process")
 		return
 	}
-	yonduResponse.ResponseCode = resp.StatusCode
+	yR.ResponseCode = resp.StatusCode
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("status code: %d", resp.StatusCode)
 		logCtx.WithFields(log.Fields{
@@ -227,10 +159,10 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 	logCtx.WithFields(log.Fields{
 		"body":           string(bodyText),
 		"respStatusCode": resp.StatusCode,
-		"url":            url,
+		"url":            apiUrl,
 	}).Debug("")
 
-	yonduResponse.ResponseRawBody = string(bodyText)
+	yR.ResponseRawBody = string(bodyText)
 
 	if err != nil {
 		err = fmt.Errorf("ioutil.ReadAll: %s", err.Error())
@@ -248,71 +180,52 @@ func (y *Yondu) call(tid, url string, code int) (yonduResponse YonduResponseExte
 		}).Error("cannot process")
 		return
 	}
-	yonduResponse.Yondu = responseJson
-
-	if yonduResponse.Yondu.Response.Code == strconv.Itoa(code) {
-		return
-	}
-
-	switch responseJson.Response.Code {
-	case "2001":
-		m.ResponseCodes.VerificationSent2001.Inc()
-	case "2002":
-		m.ResponseCodes.InvalidMobileNumber2002.Inc()
-	case "2003":
-		m.ResponseCodes.VerificationSuccessful2003.Inc()
-	case "2004":
-		m.ResponseCodes.InvalidCodeCombination2004.Inc()
-	case "2005":
-		m.ResponseCodes.ChargedFailed2005.Inc()
-	case "2006":
-		m.ResponseCodes.SuccessfullyProcessed2006.Inc()
-	case "2007":
-		m.ResponseCodes.InvalidTariff2007.Inc()
-	default:
-		m.ResponseCodes.UnknownCode.Inc()
-	}
-	codeStatus, ok := y.conf.ResponseCode[responseJson.Response.Code]
+	yR.Yondu = responseJson
+	codeStatus, ok := y.conf.MTResponseCode[responseJson.Code]
 	if !ok {
-		yonduResponse.ResponseError =
-			fmt.Errorf("unexpected response code: %s", responseJson.Response.Code).Error()
+		m.MTRequestUnknownCode.Inc()
+		yR.ResponseError =
+			fmt.Errorf("unexpected response code: %s", responseJson.Code).Error()
 
 		logCtx.WithFields(log.Fields{
+			"code":  responseJson.Code,
 			"error": "unexpected response code",
 		}).Error("cannot process")
 
-		return yonduResponse, nil
+		return
 	}
 	logCtx.WithFields(log.Fields{
 		"status": codeStatus,
-		"code":   responseJson.Response.Code,
+		"code":   responseJson.Code,
 	}).Debug("received code")
-	return yonduResponse, nil
+
+	m.MTDuration.Observe(time.Since(begin).Seconds())
+	if err == nil {
+		m.Success.Inc()
+		m.MTRequestSuccess.Inc()
+	} else {
+		m.Errors.Inc()
+		m.MTRequestErrors.Inc()
+	}
+	return
 }
 
-//Callback
-//API URL: {YourURL}/{msisdn}/{transid}/{timestamp}/{status_code}
-//Description: Where we will send charging status of each transaction
-//Method: GET
-//Required Parameters: msisdn, transid, timestamp, status_code
-//Sample Request:
-//{YourURL}/?msisdn=9171234567&transid=123456&timestamp=20160628024446&status_code=1
-
-type CallbackParameters struct {
+type DNParameters struct {
 	Params struct {
-		Msisdn      string `json:"msisdn"`
-		TransID     string `json:"transid"`
-		RCVDTransId string `json:"rcvd_transid"`
-		Timestamp   string `json:"timestamp"`
-		StatusCode  string `json:"status_code"`
+		Telco     string `json:"telco"`
+		Msisdn    string `json:"msisdn"`
+		RRN       string `json:"rrn"`
+		Status    string `json:"status"`
+		Code      string `json:"code"`
+		Timestamp string `json:"timestamp"`
 	}
 	Raw string `json:"req_url"`
 	Tid string `json:"tid"`
 }
 
-func (y *Yondu) Callback(c *gin.Context) {
+func (y *Yondu) DN(c *gin.Context) {
 
-	p := CallbackParameters{
+	p := DNParameters{
 		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 		Tid: rec.GenerateTID(),
 	}
@@ -322,50 +235,58 @@ func (y *Yondu) Callback(c *gin.Context) {
 	logCtx.Debugf("url: %s", p.Raw)
 
 	var ok bool
+	p.Params.Telco, ok = c.GetQuery("telco")
+	if !ok {
+		m.Errors.Inc()
+		m.DNErrors.Inc()
+
+		absentParameter(p.Tid, "telco", c)
+		return
+	}
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
 		m.Errors.Inc()
-		m.CallbackErrors.Inc()
+		m.DNErrors.Inc()
 
 		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
-	p.Params.TransID, ok = c.GetQuery("transid")
+	p.Params.RRN, ok = c.GetQuery("rrn")
 	if !ok {
 		m.Errors.Inc()
-		m.CallbackErrors.Inc()
+		m.DNErrors.Inc()
 
-		absentParameter(p.Tid, "transid", c)
+		absentParameter(p.Tid, "rrn", c)
+		return
+	}
+	p.Params.Status, ok = c.GetQuery("status")
+	if !ok {
+		m.Errors.Inc()
+		m.DNErrors.Inc()
+
+		absentParameter(p.Tid, "status", c)
+		return
+	}
+	p.Params.Code, ok = c.GetQuery("code")
+	if !ok {
+		m.Errors.Inc()
+		m.DNErrors.Inc()
+
+		absentParameter(p.Tid, "code", c)
 		return
 	}
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
 		m.Errors.Inc()
-		m.CallbackErrors.Inc()
+		m.DNErrors.Inc()
 
 		absentParameter(p.Tid, "timestamp", c)
 		return
 	}
-	p.Params.StatusCode, ok = c.GetQuery("status_code")
-	if !ok {
+	logIncoming("dn", p)
+	if err := svc.publishDN(p); err != nil {
 		m.Errors.Inc()
-		m.CallbackErrors.Inc()
-
-		absentParameter(p.Tid, "status_code", c)
-		return
-	}
-	p.Params.RCVDTransId, ok = c.GetQuery("rcvd_transid")
-	//if !ok {
-	//	m.Errors.Inc()
-	//	m.CallbackErrors.Inc()
-	//
-	//	absentParameter("rcvd_transid", c)
-	//	return
-	//}
-	logResponses("callback", p)
-	if err := svc.publishCallback(p); err != nil {
-		m.Errors.Inc()
-		m.CallbackErrors.Inc()
+		m.DNErrors.Inc()
 
 		logCtx.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
@@ -373,28 +294,23 @@ func (y *Yondu) Callback(c *gin.Context) {
 		}).Error("sent callback failed")
 	} else {
 		m.Success.Inc()
-		m.CallbackSuccess.Inc()
+		m.DNSuccess.Inc()
 
 		logCtx.WithFields(log.Fields{
 			"msisdn":  p.Params.Msisdn,
-			"transId": p.Params.TransID,
+			"transId": p.Params.RRN,
 		}).Info("sent")
 	}
 }
 
 //MO
-//API URL: {YourURL}/{msisdn}/{message}/{transid}/{timestamp}
-//Description: Where we will send actual message sent by subscriber to 2910
-//Method: GET
-//Required Parameters: msisdn, message, transid, timestamp
-//Sample Request:
-//{YourURL}/?msisdn=9171234567&message=Yourkeyword5 26633&transid=123456&timestamp=20160628024446
+//telco=globe&msisdn=9171234567&message=sample%20keyword&rrn=abcd1234
 type MOParameters struct {
 	Params struct {
-		Msisdn    string `json:"msisdn"`
-		TransID   string `json:"transid"`
-		Timestamp string `json:"timestamp"`
-		KeyWord   string `json:"message"`
+		Telco   string `json:"telco"`
+		Msisdn  string `json:"msisdn"`
+		Message string `json:"message"`
+		RRN     string `json:"rrn"`
 	}
 	Raw string `json:"req_url"`
 	Tid string `json:"tid"`
@@ -409,7 +325,8 @@ func (y *Yondu) MO(c *gin.Context) {
 		"tid": p.Tid,
 	})
 	logCtx.Debugf("url: %s", p.Raw)
-
+	c.JSON(200, struct{}{})
+	return
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
@@ -419,23 +336,15 @@ func (y *Yondu) MO(c *gin.Context) {
 		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
-	p.Params.TransID, ok = c.GetQuery("transid")
+	p.Params.Telco, ok = c.GetQuery("telco")
 	if !ok {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
 
-		absentParameter(p.Tid, "transid", c)
+		absentParameter(p.Tid, "telco", c)
 		return
 	}
-	p.Params.Timestamp, ok = c.GetQuery("timestamp")
-	if !ok {
-		m.Errors.Inc()
-		m.MOErrors.Inc()
-
-		absentParameter(p.Tid, "timestamp", c)
-		return
-	}
-	p.Params.KeyWord, ok = c.GetQuery("message")
+	p.Params.Message, ok = c.GetQuery("message")
 	if !ok {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
@@ -443,7 +352,15 @@ func (y *Yondu) MO(c *gin.Context) {
 		absentParameter(p.Tid, "message", c)
 		return
 	}
-	logResponses("mo", p)
+	p.Params.RRN, ok = c.GetQuery("rrn")
+	if !ok {
+		m.Errors.Inc()
+		m.MOErrors.Inc()
+
+		absentParameter(p.Tid, "rrn", c)
+		return
+	}
+	logIncoming("mo", p)
 	if err := svc.publishMO(p); err != nil {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
@@ -457,8 +374,8 @@ func (y *Yondu) MO(c *gin.Context) {
 		m.MOSuccess.Inc()
 
 		logCtx.WithFields(log.Fields{
-			"msisdn":  p.Params.Msisdn,
-			"transId": p.Params.TransID,
+			"msisdn": p.Params.Msisdn,
+			"rrn":    p.Params.RRN,
 		}).Info("sent")
 	}
 

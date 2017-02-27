@@ -19,7 +19,7 @@ func RunServer() {
 
 	service.InitService(
 		appConfig.Server,
-		appConfig.Yondo,
+		appConfig.Yondu,
 		appConfig.Consumer,
 		appConfig.Publisher,
 		appConfig.InMem,

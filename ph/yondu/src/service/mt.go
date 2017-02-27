@@ -49,7 +49,7 @@ func processMT(deliveries <-chan amqp.Delivery) {
 			goto ack
 		}
 		<-svc.YonduAPI.Throttle.MT
-		yResp, operatorErr = svc.YonduAPI.MT(t.Tid, t.Msisdn, t.SMSText)
+		yResp, operatorErr = svc.YonduAPI.MT(t)
 		logRequests("mt", t, yResp, begin, operatorErr)
 		if err = svc.publishTransactionLog("mt", yResp, t); err != nil {
 			logCtx.WithFields(log.Fields{

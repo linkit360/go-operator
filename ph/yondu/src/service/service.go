@@ -13,7 +13,6 @@ import (
 	"github.com/vostrok/operator/ph/yondu/src/config"
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
-	queue_config "github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/rec"
 )
 
@@ -36,9 +35,7 @@ type Service struct {
 }
 
 type Consumers struct {
-	SendConsent *amqp.Consumer
-	Charge      *amqp.Consumer
-	MT          *amqp.Consumer
+	MT *amqp.Consumer
 }
 
 func InitService(
@@ -62,38 +59,15 @@ func InitService(
 		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
 	}
 
-	// process consumer
+	// MT consumer
 	q := svc.conf.Yondu.Queue
 	svc.consumer = Consumers{
-		SendConsent: amqp.NewConsumer(consumerConfig, q.SendConsent.Name, q.SendConsent.PrefetchCount),
-		Charge:      amqp.NewConsumer(consumerConfig, q.Charge.Name, q.Charge.PrefetchCount),
-		MT:          amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
-	}
-	if err := svc.consumer.SendConsent.Connect(); err != nil {
-		log.Fatal("rbmq consumer connect:", err.Error())
-	}
-	if err := svc.consumer.Charge.Connect(); err != nil {
-		log.Fatal("rbmq consumer connect:", err.Error())
+		MT: amqp.NewConsumer(consumerConfig, q.MT.Name, q.MT.PrefetchCount),
 	}
 	if err := svc.consumer.MT.Connect(); err != nil {
 		log.Fatal("rbmq consumer connect:", err.Error())
 	}
-	amqp.InitQueue(
-		svc.consumer.SendConsent,
-		svc.SendConsentCh,
-		processSentConsent,
-		q.SendConsent.ThreadsCount,
-		q.SendConsent.Name,
-		q.SendConsent.Name,
-	)
-	amqp.InitQueue(
-		svc.consumer.Charge,
-		svc.ChargeCh,
-		processCharge,
-		q.Charge.ThreadsCount,
-		q.Charge.Name,
-		q.Charge.Name,
-	)
+
 	amqp.InitQueue(
 		svc.consumer.MT,
 		svc.MTCh,
@@ -105,9 +79,11 @@ func InitService(
 }
 
 func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, begin time.Time, err error) {
+	yRespJSON, _ := json.Marshal(yResp)
+	tJSON, _ := json.Marshal(t)
 	fields := log.Fields{
-		"yonduResponse": fmt.Sprintf("%#v", yResp),
-		"rec":           fmt.Sprintf("%#v", t),
+		"yonduResponse": string(yRespJSON),
+		"rec":           string(tJSON),
 		"msisdn":        t.Msisdn,
 		"took":          time.Since(begin),
 	}
@@ -119,23 +95,25 @@ func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, 
 	}
 	svc.YonduAPI.requestLog.WithFields(fields).Println(requestType)
 }
-func logResponses(reponseType string, params interface{}) {
+
+func logIncoming(reponseType string, params interface{}) {
+	respJson, _ := json.Marshal(params)
 	fields := log.Fields{
-		"params": fmt.Sprintf("%#v", params),
+		"params": respJson,
 	}
 	svc.YonduAPI.responseLog.WithFields(fields).Println(reponseType)
 }
 
-func (svc *Service) publishCallback(data CallbackParameters) error {
+func (svc *Service) publishDN(data DNParameters) error {
 	event := amqp.EventNotify{
-		EventName: "callback",
+		EventName: "dn",
 		EventData: data,
 	}
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.CallBack.Name, 0, body, event.EventName})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.DN, 0, body, event.EventName})
 	return nil
 }
 
@@ -148,7 +126,7 @@ func (svc *Service) publishMO(data MOParameters) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.MO.Name, 0, body, event.EventName})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.MO, 0, body, event.EventName})
 	return nil
 }
 
@@ -167,7 +145,7 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		CampaignId:       t.CampaignId,
 		RequestBody:      yr.RequestUrl,
 		ResponseBody:     fmt.Sprintf("%v", yr.ResponseRawBody),
-		ResponseDecision: yr.Yondu.Response.Message,
+		ResponseDecision: yr.Yondu.Message,
 		ResponseCode:     yr.ResponseCode,
 		SentAt:           yr.ResponseTime,
 		Type:             eventName,
@@ -182,20 +160,5 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Yondu.Queue.TransactionLog, 0, body, event.EventName})
-	return nil
-}
-
-func (svc *Service) newSubscriptionNotify(msg rec.Record) error {
-	msg.SentAt = time.Now().UTC()
-	event := EventNotify{
-		EventName: "new_subscription",
-		EventData: msg,
-	}
-	body, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %s", err.Error())
-	}
-	queue := queue_config.NewSubscriptionQueueName(svc.conf.Yondu.Name)
-	svc.notifier.Publish(amqp.AMQPMessage{queue, uint8(1), body, event.EventName})
 	return nil
 }
