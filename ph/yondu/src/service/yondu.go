@@ -37,7 +37,7 @@ type ThrottleConfig struct {
 func AddHandlers(r *gin.Engine) {
 	tgYonduAPI := r.Group("/api/")
 	tgYonduAPI.Group("/mo").GET("", AccessHandler, svc.YonduAPI.MO)
-	tgYonduAPI.Group("/dn").GET("", AccessHandler)
+	tgYonduAPI.Group("/dn").GET("", AccessHandler, svc.YonduAPI.DN)
 }
 func AddTestHandlers(r *gin.Engine) {
 	tgYonduAPI := r.Group("/yondu/")
@@ -62,6 +62,7 @@ func initYondu(yConf config.YonduConfig) *Yondu {
 type YonduResponseExtended struct {
 	RequestUrl      string        `json:"request"`
 	ResponseCode    int           `json:"response_code"`
+	ResponseMessage string        `json:"response_msg"`
 	ResponseError   string        `json:"response_error"`
 	ResponseRawBody string        `json:"response_raw_body"`
 	ResponseTime    time.Time     `json:"response_time"`
@@ -70,7 +71,7 @@ type YonduResponseExtended struct {
 
 type YonduResponse struct {
 	Message string `json:"msg,omitempty"`
-	Code    string `json:"status_code,omitempty"`
+	Code    int    `json:"status_code,omitempty"`
 }
 
 // sends charge request and if the msisdn successfully charged, then sends content from the message
@@ -181,7 +182,7 @@ func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 		return
 	}
 	yR.Yondu = responseJson
-	codeStatus, ok := y.conf.MTResponseCode[responseJson.Code]
+	codeStatus, ok := y.conf.MTResponseCode[strconv.Itoa(responseJson.Code)]
 	if !ok {
 		m.MTRequestUnknownCode.Inc()
 		yR.ResponseError =
@@ -191,8 +192,10 @@ func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 			"code":  responseJson.Code,
 			"error": "unexpected response code",
 		}).Error("cannot process")
-
+		yR.ResponseMessage = "invalid code"
 		return
+	} else {
+		yR.ResponseMessage = codeStatus
 	}
 	logCtx.WithFields(log.Fields{
 		"status": codeStatus,
@@ -291,14 +294,14 @@ func (y *Yondu) DN(c *gin.Context) {
 		logCtx.WithFields(log.Fields{
 			"p":     fmt.Sprintf("%#v", p),
 			"error": err.Error(),
-		}).Error("sent callback failed")
+		}).Error("sent dn failed")
 	} else {
 		m.Success.Inc()
 		m.DNSuccess.Inc()
 
 		logCtx.WithFields(log.Fields{
-			"msisdn":  p.Params.Msisdn,
-			"transId": p.Params.RRN,
+			"msisdn": p.Params.Msisdn,
+			"rrn":    p.Params.RRN,
 		}).Info("sent")
 	}
 }
@@ -312,21 +315,22 @@ type MOParameters struct {
 		Message string `json:"message"`
 		RRN     string `json:"rrn"`
 	}
-	Raw string `json:"req_url"`
-	Tid string `json:"tid"`
+	Raw        string `json:"req_url"`
+	Tid        string `json:"tid"`
+	ReceivedAt time.Time
 }
 
 func (y *Yondu) MO(c *gin.Context) {
 	p := MOParameters{
-		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
-		Tid: rec.GenerateTID(),
+		Raw:        c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		Tid:        rec.GenerateTID(),
+		ReceivedAt: time.Now().UTC(),
 	}
 	logCtx := log.WithFields(log.Fields{
 		"tid": p.Tid,
 	})
 	logCtx.Debugf("url: %s", p.Raw)
-	c.JSON(200, struct{}{})
-	return
+
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {

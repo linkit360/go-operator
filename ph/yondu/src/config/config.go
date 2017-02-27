@@ -42,7 +42,6 @@ type YonduConfig struct {
 	Throttle               ThrottleConfig       `yaml:"throttle"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	MTResponseCode         map[string]string    `yaml:"mt_code"`
-	DNResponseCode         map[string]string    `yaml:"dn_code"`
 	TariffCode             map[string]string    `yaml:"tariff"`
 	Queue                  YonduQueuesConfig    `yaml:"queues"`
 }

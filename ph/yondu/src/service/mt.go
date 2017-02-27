@@ -40,14 +40,6 @@ func processMT(deliveries <-chan amqp.Delivery) {
 			"tid": t.Tid,
 		})
 
-		if t.SMSText == "" {
-			m.Dropped.Inc()
-
-			logCtx.WithFields(log.Fields{
-				"msg": "dropped",
-			}).Error("empty text")
-			goto ack
-		}
 		<-svc.YonduAPI.Throttle.MT
 		yResp, operatorErr = svc.YonduAPI.MT(t)
 		logRequests("mt", t, yResp, begin, operatorErr)
