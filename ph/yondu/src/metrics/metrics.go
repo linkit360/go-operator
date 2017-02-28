@@ -20,14 +20,13 @@ var (
 	MTRequestSuccess     m.Gauge
 	MTRequestErrors      m.Gauge
 	MTRequestUnknownCode m.Gauge
+	MTDuration           prometheus.Summary
 
 	MOSuccess m.Gauge
 	MOErrors  m.Gauge
 
 	DNSuccess m.Gauge
 	DNErrors  m.Gauge
-
-	MTDuration prometheus.Summary
 )
 
 func Init(appName string) {
@@ -46,8 +45,8 @@ func Init(appName string) {
 	MOSuccess = m.NewGauge("", appName, "mo_success", "yondu mo success")
 	MOErrors = m.NewGauge("", appName, "mo_errors", "yondu mo errors")
 
-	DNSuccess = m.NewGauge("", appName, "callback_success", "yondu callback success")
-	DNErrors = m.NewGauge("", appName, "callback_errors", "yondu callback errors")
+	DNSuccess = m.NewGauge("", appName, "dn_success", "yondu dn success")
+	DNErrors = m.NewGauge("", appName, "dn_errors", "yondu dn errors")
 
 	MTDuration = m.NewSummary(appName+"_mt_duration_seconds", "mt duration seconds")
 	go func() {
