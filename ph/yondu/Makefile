@@ -22,7 +22,6 @@ build:
 
 mou:
 	curl -v "http://localhost:50306/api/mo?message=Play%20off&msisdn=9951502420&telco=globe&rrn=1488219393"
-
 mo:
 	curl -v "http://localhost:50306/api/mo?message=Play%20on&msisdn=9951502420&telco=globe&rrn=1488219393"
 

@@ -97,7 +97,7 @@ func (svc *Service) publishResponse(eventName string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue_config.ResponsesQueue("mobilink"), 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue_config.ResponsesQueue("mobilink"), 0, body, event.EventName})
 	return nil
 }
 
@@ -110,6 +110,6 @@ func (svc *Service) publishSMSResponse(eventName string, data interface{}) error
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{queue_config.SMSResponsesQueue("mobilink"), 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{queue_config.SMSResponsesQueue("mobilink"), 0, body, event.EventName})
 	return nil
 }

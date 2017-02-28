@@ -112,7 +112,9 @@ func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 			return
 		}
 		v.Add("keyword", code)
+		v.Add("message", "")
 	}
+	v.Add("rrn", r.OperatorToken)
 
 	apiUrl := y.conf.APIUrl + "?" + v.Encode()
 
@@ -229,7 +231,7 @@ type DNParameters struct {
 func (y *Yondu) DN(c *gin.Context) {
 
 	p := DNParameters{
-		Raw: c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
+		Raw: c.Request.URL.Path + "/?" + c.Request.URL.RawQuery,
 		Tid: rec.GenerateTID(),
 	}
 	logCtx := log.WithFields(log.Fields{
