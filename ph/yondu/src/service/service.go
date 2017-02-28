@@ -99,7 +99,7 @@ func logRequests(requestType string, t rec.Record, yResp YonduResponseExtended, 
 func logIncoming(reponseType string, params interface{}) {
 	respJson, _ := json.Marshal(params)
 	fields := log.Fields{
-		"params": respJson,
+		"params": string(respJson),
 	}
 	svc.YonduAPI.responseLog.WithFields(fields).Println(reponseType)
 }
