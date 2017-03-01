@@ -130,6 +130,7 @@ func logRequests(requestType string, fields log.Fields, t rec.Record) {
 	fields["type"] = requestType
 	fields["rec"] = string(recJson)
 	svc.API.requestLog.WithFields(fields).Println(requestType)
+	log.WithFields(fields).Info(requestType)
 }
 
 func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTransactionLog) (err error) {

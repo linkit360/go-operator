@@ -178,22 +178,20 @@ func (qr *QRTech) dn(c *gin.Context) {
 	}
 	bcdate, ok := c.GetPostForm("bcdate")
 	if !ok {
-		m.AbsentParameter.Inc()
-		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find bcdate")
-		r.OperatorErr = r.OperatorErr + " no bcdate"
 	}
-	operatorTime, err := time.Parse("20060102", bcdate)
-	if err != nil {
-		m.Errors.Inc()
+	operatorTime := time.Now()
+	if bcdate != "" {
+		operatorTime, err = time.Parse("20060102", bcdate)
+		if err != nil {
 
-		err = fmt.Errorf("time.Parse: %s", err.Error())
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Warn("cann't parse time")
-
-		r.OperatorErr = r.OperatorErr + " cann't parse time"
-		operatorTime = time.Now()
+			err = fmt.Errorf("time.Parse: %s", err.Error())
+			logCtx.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Warn("cann't parse time")
+			err = nil
+			// not critical
+		}
 	}
 
 	keyWord, ok := c.GetPostForm("keyword")

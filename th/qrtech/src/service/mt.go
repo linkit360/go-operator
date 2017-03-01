@@ -130,9 +130,6 @@ func (qr *QRTech) sendMT() {
 }
 
 func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
-	logCtx := log.WithFields(log.Fields{
-		"q": svc.conf.QRTech.Queue.MT,
-	})
 	v := url.Values{}
 	var resp *http.Response
 	var qrTechResponse []byte
@@ -144,7 +141,7 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 	v.Add("content", strconv.QuoteToASCII(smsText)) // when sees any non-ascii type, converts to unicode
 	//v.Add("header", 1) // is not mandatory
 
-	logCtx.WithFields(log.Fields{
+	log.WithFields(log.Fields{
 		"url":    qr.conf.MT.APIUrl,
 		"params": v.Encode(),
 	}).Debug("call...")
@@ -179,13 +176,13 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 	defer resp.Body.Close()
 
 	result := string(qrTechResponse)
-	logCtx.WithFields(log.Fields{
+	log.WithFields(log.Fields{
 		"response": result,
 	}).Debug("got response")
 
 	operatorToken := ""
 	if _, err = strconv.Atoi(result); err != nil {
-		logCtx.WithFields(log.Fields{
+		log.WithFields(log.Fields{
 			"response": result,
 		}).Error("unknown response")
 		return
@@ -193,12 +190,12 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		var negativeAnswer bool
 		operatorToken, negativeAnswer = svc.API.conf.MT.ResultCode[result]
 		if !negativeAnswer {
-			logCtx.WithFields(log.Fields{
+			log.WithFields(log.Fields{
 				"token": operatorToken,
 			}).Debug("ok")
 		} else {
 			err = fmt.Errorf("Operator Error Code: %s", operatorToken)
-			logCtx.WithFields(log.Fields{}).Error(operatorToken)
+			log.WithFields(log.Fields{}).Error(operatorToken)
 			return
 		}
 	}
@@ -222,7 +219,7 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		Type:             "mt",
 	}
 	if err = svc.publishTransactionLog(tl); err != nil {
-		logCtx.WithFields(log.Fields{
+		log.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("sent to transaction log failed")
 	}

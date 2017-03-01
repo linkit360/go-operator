@@ -16,7 +16,6 @@ import (
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/config"
 	"github.com/vostrok/utils/db"
 )
 
@@ -69,11 +68,10 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/request_qrtech.log" yaml:"request"`
 }
 type QRTechQueuesConfig struct {
-	MO             string                    `yaml:"mo" default:"qrtech_mo"`
-	DN             string                    `yaml:"dn" default:"qrtech_dn"`
-	Unsubscribe    string                    `yaml:"unsubscribe" default:"mt_manager"`
-	TransactionLog string                    `yaml:"transaction_log" default:"transaction_log"`
-	MT             config.ConsumeQueueConfig `yaml:"mt"`
+	MO             string `yaml:"mo" default:"qrtech_mo"`
+	DN             string `yaml:"dn" default:"qrtech_dn"`
+	Unsubscribe    string `yaml:"unsubscribe" default:"mt_manager"`
+	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
 }
 type InternalsConfig struct {
 	sync.RWMutex

@@ -1,4 +1,4 @@
-app_name: telco
+app_name: cheese
 
 server:
   port: 50306
@@ -7,7 +7,6 @@ server:
 inmem_client:
   dsn: 50307
   timeout: 10
-
 
 cheese:
   name: cheese
@@ -24,6 +23,8 @@ cheese:
     request: /var/log/linkit/requests_cheese.log
   queues:
     transaction_log: transaction_log
+    mo: cheese_mo
+    unsubscribe: mt_manager
 
 consumer:
   reconnect_delay: 10

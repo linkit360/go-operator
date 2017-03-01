@@ -26,11 +26,6 @@ qrtech:
     transaction_log: transaction_log
     unsubscribe: mt_manager
     mo: qrtech_mo
-    mt:
-      enabled: true
-      name: qrtech_mt
-      prefetch_count: 10
-      threads_count: 10
   dn:
     code:
       200: MT delivered successfully
