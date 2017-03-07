@@ -137,8 +137,9 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 	v.Add("username", qr.conf.MT.UserName)
 	v.Add("serviceid", strconv.FormatInt(serviceId, 10))
 	v.Add("broadcastdate", time.Now().Format("20060102150405")[:8])
-	v.Add("ctype", "1")                             // 1=text/ 2=unicode type
-	v.Add("content", strconv.QuoteToASCII(smsText)) // when sees any non-ascii type, converts to unicode
+	v.Add("ctype", "1") // 1=text/ 2=unicode type
+	time2Add2Text := time.Now().Format("02-01-2006")
+	v.Add("content", strconv.QuoteToASCII(time2Add2Text+" "+smsText)) // when sees any non-ascii type, converts to unicode
 	//v.Add("header", 1) // is not mandatory
 
 	log.WithFields(log.Fields{
