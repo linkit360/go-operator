@@ -24,13 +24,13 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	AppName   string                       `yaml:"app_name"`
-	Server    ServerConfig                 `yaml:"server"`
-	DB        db.DataBaseConfig            `yaml:"db"`
-	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
-	Publisher amqp.NotifierConfig          `yaml:"publisher"`
-	Cheese    CheeseConfig                 `yaml:"cheese"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
+	AppName   string                    `yaml:"app_name"`
+	Server    ServerConfig              `yaml:"server"`
+	DB        db.DataBaseConfig         `yaml:"db"`
+	Consumer  amqp.ConsumerConfig       `yaml:"consumer"`
+	Publisher amqp.NotifierConfig       `yaml:"publisher"`
+	Cheese    CheeseConfig              `yaml:"cheese"`
+	InMem     inmem_client.ClientConfig `yaml:"inmem"`
 }
 
 type CheeseConfig struct {

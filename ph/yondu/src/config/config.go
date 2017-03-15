@@ -25,13 +25,13 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	AppName   string                       `yaml:"app_name"`
-	Server    ServerConfig                 `yaml:"server"`
-	Yondu     YonduConfig                  `yaml:"yondu"`
-	DB        db.DataBaseConfig            `yaml:"db"`
-	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
-	Publisher amqp.NotifierConfig          `yaml:"publisher"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem_client"`
+	AppName   string                    `yaml:"app_name"`
+	Server    ServerConfig              `yaml:"server"`
+	Yondu     YonduConfig               `yaml:"yondu"`
+	DB        db.DataBaseConfig         `yaml:"db"`
+	Consumer  amqp.ConsumerConfig       `yaml:"consumer"`
+	Publisher amqp.NotifierConfig       `yaml:"publisher"`
+	InMem     inmem_client.ClientConfig `yaml:"inmem_client"`
 }
 
 type YonduConfig struct {

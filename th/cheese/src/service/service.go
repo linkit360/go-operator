@@ -35,7 +35,7 @@ func InitService(
 	cheeseConf config.CheeseConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
-	inMemConfig inmem_client.RPCClientConfig,
+	inMemConfig inmem_client.ClientConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{

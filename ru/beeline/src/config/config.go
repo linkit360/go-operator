@@ -23,13 +23,13 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	AppName   string                       `yaml:"app_name"`
-	Server    ServerConfig                 `yaml:"server"`
-	Beeline   BeelineConfig                `yaml:"beeline"`
-	DB        db.DataBaseConfig            `yaml:"db"`
-	Consumer  amqp.ConsumerConfig          `yaml:"consumer"`
-	Publisher amqp.NotifierConfig          `yaml:"publisher"`
-	InMem     inmem_client.RPCClientConfig `yaml:"inmem"`
+	AppName   string                    `yaml:"app_name"`
+	Server    ServerConfig              `yaml:"server"`
+	Beeline   BeelineConfig             `yaml:"beeline"`
+	DB        db.DataBaseConfig         `yaml:"db"`
+	Consumer  amqp.ConsumerConfig       `yaml:"consumer"`
+	Publisher amqp.NotifierConfig       `yaml:"publisher"`
+	InMem     inmem_client.ClientConfig `yaml:"inmem"`
 }
 type SmppConfig struct {
 	Addr     string `yaml:"addr" default:"217.118.84.12:3340"`

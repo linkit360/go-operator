@@ -37,7 +37,7 @@ type Service struct {
 
 func InitService(
 	beeConf config.BeelineConfig,
-	inMemConfig inmem_client.RPCClientConfig,
+	inMemConfig inmem_client.ClientConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
