@@ -41,6 +41,7 @@ func InitService(
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
+
 	log.SetLevel(log.DebugLevel)
 	svc := Service{
 		responseLog: logger.GetFileLogger(beeConf.TransactionLogFilePath.ResponseLogPath),
@@ -59,7 +60,7 @@ func InitService(
 	}
 }
 
-func logRequests(tid string, p pdu.Body, err string) {
+func logRequests(tid string, p pdu.Body, err error) {
 	f := p.Fields()
 	tlv := p.TLVFields()
 	fields := log.Fields{
@@ -70,8 +71,8 @@ func logRequests(tid string, p pdu.Body, err string) {
 		"dst":           f[pdufield.DestinationAddr].String(),
 		"short_message": f[pdufield.ShortMessage].String(),
 	}
-	if err != "" {
-		fields["error"] = err
+	if err != nil {
+		fields["error"] = err.Error()
 	}
 	svc.requestLog.WithFields(fields).Println(".")
 }
@@ -104,7 +105,7 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
-	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Beeline.Queue.TransactionLog, 0, body})
+	svc.notifier.Publish(amqp.AMQPMessage{svc.conf.Beeline.Queue.TransactionLog, 0, body, event.EventName})
 	return nil
 }
 

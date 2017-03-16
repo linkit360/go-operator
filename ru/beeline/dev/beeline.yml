@@ -16,6 +16,7 @@ beeline:
   timeout: 40
   api_url:
   location: Asia/Karachi
+  short_number: 8580
   transaction_log:
     response: /var/log/linkit/response_beeline.log
     request: /var/log/linkit/requests_beeline.log

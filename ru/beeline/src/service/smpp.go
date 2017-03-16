@@ -19,6 +19,7 @@ import (
 	transaction_log_service "github.com/vostrok/qlistener/src/service"
 	"github.com/vostrok/utils/amqp"
 	rec "github.com/vostrok/utils/rec"
+	"strconv"
 )
 
 type SmppMessage struct {
@@ -38,13 +39,13 @@ func (svc *Service) pduHandler(p pdu.Body) {
 		Tid:           rec.GenerateTID(),
 		CountryCode:   svc.conf.Beeline.CountryCode,
 		OperatorCode:  svc.conf.Beeline.MccMnc,
-		Msisdn:        f[pdufield.SourceAddr],
-		OperatorToken: h.Seq,
-		Notice:        f[pdufield.ShortMessage],
+		Msisdn:        string(f[pdufield.SourceAddr].Bytes()),
+		OperatorToken: strconv.FormatUint(uint64(h.Seq), 10),
+		Notice:        string(f[pdufield.ShortMessage].Bytes()),
 	}
 	defer logRequests(r.Tid, p, err)
 
-	_, err = resolveRec(f[pdufield.DestinationAddr], r)
+	_, err = resolveRec(string(f[pdufield.DestinationAddr].Bytes()), r)
 	if err != nil {
 		return
 	}
@@ -55,54 +56,9 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	case "4": // subscritpion disabled
 	case "5": // charge notify. charged <sum> rub. Next date ...
 	case "6": // block_subscribtion - unsubscribe
-		unsubscribeAll(r)
+		unsubscribeAll(*r)
 	case "7": // block subscriber
 	case "9": // msisdn change
-	}
-}
-
-func acknowledgeChargeNotify(p pdu.Body, service inmem_service.Service, r *rec.Record) (err error) {
-	logCtx := log.WithFields(log.Fields{
-		"tid":    r.Tid,
-		"msisdn": r.Msisdn,
-	})
-	if service.ShortNumber == "" {
-		m.Errors.Inc()
-
-		err = fmt.Errorf("service id %d shortnumber is empty", service.Id)
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("cann't process")
-		return
-	}
-	if r.Msisdn == "" {
-		m.Errors.Inc()
-
-		err = fmt.Errorf("no msisdn %s", svc.pduBody(p))
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("cann't process")
-		return
-	}
-
-	dr := pdu.NewDeliverSMResp()
-	dr.Fields().Set(pdufield.SourceAddr, service.ShortNumber)
-	dr.Fields().Set(pdufield.DestinationAddr, r.Msisdn)
-	dr.Header().Status = uint32(0)
-	log.Debugf("dr %#v", dr)
-	svc.transceiver.Submit()
-
-	if err == smpp_client.ErrNotConnected {
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("cann't process")
-		return fmt.Errorf("smpp.Submit: %s", err.Error())
-	}
-	if err != nil {
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("cann't process")
-		return fmt.Errorf("smpp.Submit: %s", err.Error())
 	}
 }
 
@@ -170,31 +126,13 @@ func resolveRec(dstAddress string, r *rec.Record) (
 	return
 }
 
-func (svc *Service) pduBody(p pdu.Body) string {
-	msg := &SmppMessage{
-		Fields:    make(map[string]string, len(p.FieldList())),
-		TlvFields: make(map[pdufield.TLVType]string, len(p.TLVFields())),
-	}
-	f := p.Fields()
-	for l := range p.FieldList() {
-		msg.Fields[l] = f[l].String()
-	}
-	for tlvType, v := range p.TLVFields() {
-		msg.TlvFields[tlvType] = string(v.Bytes())
-	}
-	msg.Headers = p.Header()
-
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.WithField("error", err.Error()).Error("cannot marshal body")
-		return ""
-	}
-	return string(data)
-}
 func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
 	sentAt := time.Now().UTC()
 	f := p.Fields()
 	tlv := p.TLVFields()
+
+	body, _ := json.Marshal(p)
+
 	tl := transaction_log_service.OperatorTransactionLog{
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
@@ -205,7 +143,7 @@ func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
 		Price:            r.Price,
 		ServiceId:        r.ServiceId,
 		CampaignId:       r.CampaignId,
-		RequestBody:      svc.pduBody(p),
+		RequestBody:      string(body),
 		ResponseBody:     "",
 		ResponseDecision: string(tlv[pdufield.SourcePort].Bytes()),
 		ResponseCode:     200,
@@ -217,7 +155,7 @@ func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
 }
 
 func unsubscribeAll(msg rec.Record) error {
-	return _notifyDBAction("UnsubscribeAll", msg)
+	return _notifyDBAction("UnsubscribeAll", &msg)
 }
 func _notifyDBAction(eventName string, msg *rec.Record) (err error) {
 	msg.SentAt = time.Now().UTC()

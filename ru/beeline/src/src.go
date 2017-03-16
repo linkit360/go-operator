@@ -18,11 +18,10 @@ func RunServer() {
 	metrics.Init(appConfig.AppName)
 
 	service.InitService(
-		appConfig.Server,
 		appConfig.Beeline,
+		appConfig.InMem,
 		appConfig.Consumer,
 		appConfig.Publisher,
-		appConfig.InMem,
 	)
 
 	nuCPU := runtime.NumCPU()
@@ -30,8 +29,6 @@ func RunServer() {
 	log.WithField("CPUCount", nuCPU)
 
 	r := gin.New()
-	service.AddTestHandlers(r)
-	service.AddHandlers(r)
 	m.AddHandler(r)
 
 	r.NoRoute(notFound)

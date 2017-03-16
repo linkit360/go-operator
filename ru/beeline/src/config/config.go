@@ -41,17 +41,12 @@ type BeelineConfig struct {
 	Name                   string               `yaml:"name"`
 	MccMnc                 int64                `yaml:"mccmnc"`
 	CountryCode            int64                `yaml:"country_code"`
+	ShortNUmber            string               `yaml:"short_number"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  BeelineQueuesConfig  `yaml:"queues"`
 	SMPP                   SmppConfig           `yaml:"smpp"`
 }
-type SmppConfig struct {
-	ShortNumber string `default:"4162" yaml:"short_number" json:"short_number"`
-	Addr        string `default:"182.16.255.46:15019" yaml:"endpoint"`
-	User        string `default:"SLYEPPLA" yaml:"user"`
-	Password    string `default:"SLYPEE_1" yaml:"pass"`
-	Timeout     int    `default:"20" yaml:"timeout"`
-}
+
 type ThrottleConfig struct {
 	HTTP int `yaml:"http"`
 }
