@@ -222,7 +222,7 @@ func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) *smpp_
 			} else {
 				log.WithFields(log.Fields{
 					"status": c.Status().String(),
-				}).Info("smpp moblink connect ok")
+				}).Info("smpp connect ok")
 				m.SMPPConnected.Set(1)
 			}
 		}

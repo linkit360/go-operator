@@ -33,6 +33,7 @@ func Init(appName string) {
 	NotifyErrors = m.NewGauge("", appName, "notify_errors", "notify errors")
 	MOParseTimeError = m.NewGauge("", appName, "mo_parse_time_errors", "parse time errors")
 	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
+	SMPPConnected = m.PrometheusGauge("", appName, "smpp_connected", "smpp connected")
 
 	go func() {
 		for range time.Tick(time.Minute) {
