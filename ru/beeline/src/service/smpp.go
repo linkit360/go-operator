@@ -216,8 +216,9 @@ func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) *smpp_
 			if c.Status().String() != "Connected" {
 				m.SMPPConnected.Set(0)
 				log.WithFields(log.Fields{
+					"user":   conf.User,
 					"status": c.Status().String(),
-					"error":  "disconnected:" + c.Status().String(),
+					"error":  "disconnected: " + c.Error().Error(),
 				}).Error("smpp connect failed")
 			} else {
 				log.WithFields(log.Fields{
