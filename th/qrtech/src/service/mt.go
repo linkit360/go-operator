@@ -87,7 +87,7 @@ func (qr *QRTech) sendMT() {
 			} else {
 				log.WithFields(log.Fields{
 					"service": serviceIns.Id,
-				}).Debug("not found")
+				}).Debug("was not called")
 			}
 
 			now := time.Now().In(svc.API.location)

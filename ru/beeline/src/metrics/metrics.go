@@ -25,6 +25,7 @@ var (
 func Init(appName string) {
 
 	Success = m.NewGauge("", "", "success", "success")
+	Incoming = m.NewGauge("", "", "incoming", "incoming")
 	Errors = m.NewGauge("", "", "errors", "errors")
 	AbsentParameter = m.NewGauge("", appName, "adsent_parameter", "wrong parameters")
 	PageNotFound = m.NewGauge("", appName, "404_page_not_found", "404 page not found")
