@@ -16,8 +16,10 @@ rm:
 build:
 	export GOOS=linux; export GOARCH=amd64; \
 	sed -i "s/%VERSION%/$(VERSION)/g" /home/centos/vostrok/utils/metrics/metrics.go; \
-  go build -ldflags "-s -w" -o bin/cheese-linux-amd64 ; cp bin/cheese-linux-amd64 ~/linkit; cp dev/cheese.yml ~/linkit/;
+  go build -ldflags "-s -w" -o bin/cheese-linux-amd64 ;
 
+cp:
+    cp bin/cheese-linux-amd64 ~/linkit; cp dev/cheese.yml ~/linkit/;
 
 ais:
 	curl -v "http://localhost:50306/api/mo/ais?ref=61201000015999095326&msn=66911111110&svk=777&acs=REG_SUCCESS&chn=SMS&mdt=2016-12-01%2000:00:18.227"
