@@ -150,6 +150,11 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		SentAt:           yr.ResponseTime,
 		Type:             eventName,
 	}
+	if t.Price > 0 {
+		t.Notice = "charge req"
+	} else {
+		t.Notice = "content"
+	}
 	tl.SentAt = time.Now().UTC()
 	event := amqp.EventNotify{
 		EventName: eventName,

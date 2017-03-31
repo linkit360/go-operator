@@ -350,9 +350,6 @@ func (y *Yondu) MO(c *gin.Context) {
 	if !ok {
 		m.Errors.Inc()
 		m.MOErrors.Inc()
-
-		absentParameter(p.Tid, "telco", c)
-		return
 	}
 	p.Params.Message, ok = c.GetQuery("message")
 	if !ok {
