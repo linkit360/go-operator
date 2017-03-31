@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/vostrok/operator/th/cheese/src"
+	"github.com/linkit360/go-operator/th/cheese/src"
 )
 
 func main() {

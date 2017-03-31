@@ -12,8 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
-	rec "github.com/vostrok/utils/rec"
+	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
+	rec "github.com/linkit360/go-utils/rec"
 )
 
 type EventNotifyUserActions struct {

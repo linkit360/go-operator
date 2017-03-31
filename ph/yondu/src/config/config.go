@@ -9,10 +9,10 @@ import (
 	"github.com/jinzhu/configor"
 
 	"fmt"
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/config"
-	"github.com/vostrok/utils/db"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	"github.com/linkit360/go-utils/amqp"
+	"github.com/linkit360/go-utils/config"
+	"github.com/linkit360/go-utils/db"
 )
 
 type ServiceConfig struct {
@@ -42,6 +42,7 @@ type YonduConfig struct {
 	Throttle               ThrottleConfig       `yaml:"throttle"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	MTResponseCode         map[string]string    `yaml:"mt_code"`
+	DNCode                 map[string]string    `yaml:"dn_code"`
 	TariffCode             map[string]string    `yaml:"tariff"`
 	Queue                  YonduQueuesConfig    `yaml:"queues"`
 }

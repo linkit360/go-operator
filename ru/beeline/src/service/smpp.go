@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,14 +13,13 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	inmem_service "github.com/vostrok/inmem/service"
-	"github.com/vostrok/operator/ru/beeline/src/config"
-	m "github.com/vostrok/operator/ru/beeline/src/metrics"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	"github.com/vostrok/utils/amqp"
-	rec "github.com/vostrok/utils/rec"
-	"strconv"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_service "github.com/linkit360/go-inmem/service"
+	"github.com/linkit360/go-operator/ru/beeline/src/config"
+	m "github.com/linkit360/go-operator/ru/beeline/src/metrics"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
+	"github.com/linkit360/go-utils/amqp"
+	rec "github.com/linkit360/go-utils/rec"
 )
 
 type SmppMessage struct {

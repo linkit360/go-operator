@@ -6,10 +6,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	"github.com/vostrok/operator/ru/beeline/src/config"
-	"github.com/vostrok/operator/ru/beeline/src/metrics"
-	"github.com/vostrok/operator/ru/beeline/src/service"
-	m "github.com/vostrok/utils/metrics"
+	"github.com/linkit360/go-operator/ru/beeline/src/config"
+	"github.com/linkit360/go-operator/ru/beeline/src/metrics"
+	"github.com/linkit360/go-operator/ru/beeline/src/service"
+	m "github.com/linkit360/go-utils/metrics"
 )
 
 func RunServer() {

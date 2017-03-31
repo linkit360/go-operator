@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/vostrok/operator/ru/beeline/src"
+	"github.com/linkit360/go-operator/ru/beeline/src"
 )
 
 func main() {

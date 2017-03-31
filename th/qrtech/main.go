@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/vostrok/operator/th/qrtech/src"
+	"github.com/linkit360/go-operator/th/qrtech/src"
 )
 
 func main() {

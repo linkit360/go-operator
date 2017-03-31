@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/vostrok/operator/pk/mobilink/src"
+	"github.com/linkit360/go-operator/pk/mobilink/src"
 )
 
 func main() {

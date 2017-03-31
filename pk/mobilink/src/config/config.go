@@ -8,9 +8,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
-	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/config"
+	mobilink_api "github.com/linkit360/go-operator/pk/mobilink/src/api"
+	"github.com/linkit360/go-utils/amqp"
+	"github.com/linkit360/go-utils/config"
 )
 
 type ServerConfig struct {

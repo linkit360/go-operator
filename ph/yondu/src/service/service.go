@@ -9,11 +9,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/operator/ph/yondu/src/config"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/rec"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	"github.com/linkit360/go-operator/ph/yondu/src/config"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
+	"github.com/linkit360/go-utils/amqp"
+	"github.com/linkit360/go-utils/rec"
 )
 
 var svc Service

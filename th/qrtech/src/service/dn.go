@@ -10,10 +10,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	m "github.com/vostrok/operator/th/qrtech/src/metrics"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	rec "github.com/vostrok/utils/rec"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
+	rec "github.com/linkit360/go-utils/rec"
 )
 
 func AddDNHandler(r *gin.Engine) {

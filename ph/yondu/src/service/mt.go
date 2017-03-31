@@ -8,8 +8,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	m "github.com/vostrok/operator/ph/yondu/src/metrics"
-	"github.com/vostrok/utils/rec"
+	m "github.com/linkit360/go-operator/ph/yondu/src/metrics"
+	"github.com/linkit360/go-utils/rec"
 )
 
 func processMT(deliveries <-chan amqp.Delivery) {

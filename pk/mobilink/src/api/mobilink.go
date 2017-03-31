@@ -20,10 +20,10 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 	"github.com/gin-gonic/gin"
 
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	"github.com/vostrok/utils/amqp"
-	rec "github.com/vostrok/utils/rec"
+	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
+	"github.com/linkit360/go-utils/amqp"
+	rec "github.com/linkit360/go-utils/rec"
 )
 
 func (mb *Mobilink) Tarifficate(record *rec.Record) error {

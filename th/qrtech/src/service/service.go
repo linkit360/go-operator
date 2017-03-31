@@ -9,13 +9,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/operator/th/qrtech/src/config"
-	m "github.com/vostrok/operator/th/qrtech/src/metrics"
-	transaction_log_service "github.com/vostrok/qlistener/src/service"
-	"github.com/vostrok/utils/amqp"
-	logger "github.com/vostrok/utils/log"
-	rec "github.com/vostrok/utils/rec"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	"github.com/linkit360/go-operator/th/qrtech/src/config"
+	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
+	"github.com/linkit360/go-utils/amqp"
+	logger "github.com/linkit360/go-utils/log"
+	rec "github.com/linkit360/go-utils/rec"
 )
 
 var svc Service

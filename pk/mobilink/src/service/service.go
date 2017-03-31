@@ -8,10 +8,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
-	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
-	"github.com/vostrok/operator/pk/mobilink/src/config"
-	"github.com/vostrok/utils/amqp"
-	queue_config "github.com/vostrok/utils/config"
+	mobilink_api "github.com/linkit360/go-operator/pk/mobilink/src/api"
+	"github.com/linkit360/go-operator/pk/mobilink/src/config"
+	"github.com/linkit360/go-utils/amqp"
+	queue_config "github.com/linkit360/go-utils/config"
 )
 
 var svc Service

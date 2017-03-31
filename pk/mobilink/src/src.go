@@ -7,11 +7,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	mobilink_api "github.com/vostrok/operator/pk/mobilink/src/api"
-	"github.com/vostrok/operator/pk/mobilink/src/config"
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
-	"github.com/vostrok/operator/pk/mobilink/src/service"
-	metrics "github.com/vostrok/utils/metrics"
+	mobilink_api "github.com/linkit360/go-operator/pk/mobilink/src/api"
+	"github.com/linkit360/go-operator/pk/mobilink/src/config"
+	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
+	"github.com/linkit360/go-operator/pk/mobilink/src/service"
+	metrics "github.com/linkit360/go-utils/metrics"
 )
 
 func RunServer() {

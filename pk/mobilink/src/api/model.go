@@ -7,9 +7,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
 
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
-	"github.com/vostrok/utils/amqp"
-	logger "github.com/vostrok/utils/log"
+	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
+	"github.com/linkit360/go-utils/amqp"
+	logger "github.com/linkit360/go-utils/log"
 )
 
 type Mobilink struct {

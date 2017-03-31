@@ -12,10 +12,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	"github.com/vostrok/operator/ph/yondu/src/config"
-	m "github.com/vostrok/operator/ph/yondu/src/metrics"
-	logger "github.com/vostrok/utils/log"
-	"github.com/vostrok/utils/rec"
+	"github.com/linkit360/go-operator/ph/yondu/src/config"
+	m "github.com/linkit360/go-operator/ph/yondu/src/metrics"
+	logger "github.com/linkit360/go-utils/log"
+	"github.com/linkit360/go-utils/rec"
 )
 
 // Yondu API implements:
@@ -82,10 +82,12 @@ func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 	logCtx := log.WithFields(log.Fields{
 		"tid": r.Tid,
 	})
+
 	v := url.Values{}
 	v.Add("key", y.conf.AuthKey)
 	v.Add("msisdn", r.Msisdn)
-
+	v.Add("rrn", r.OperatorToken)
+	apiUrl := ""
 	if r.SMSText != "" {
 		code, ok := y.conf.TariffCode["0"]
 		if !ok {
@@ -113,10 +115,9 @@ func (y *Yondu) MT(r rec.Record) (yR YonduResponseExtended, err error) {
 		}
 		v.Add("keyword", code)
 		v.Add("message", "")
-	}
-	v.Add("rrn", r.OperatorToken)
 
-	apiUrl := y.conf.APIUrl + "?" + v.Encode()
+	}
+	apiUrl = y.conf.APIUrl + "?" + v.Encode()
 
 	defer func() {
 		yR.RequestUrl = apiUrl
@@ -237,7 +238,7 @@ func (y *Yondu) DN(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"tid": p.Tid,
 	})
-	logCtx.Debugf("url: %s", p.Raw)
+	c.Set("tid", p.Tid)
 
 	var ok bool
 	p.Params.Telco, ok = c.GetQuery("telco")
@@ -280,6 +281,8 @@ func (y *Yondu) DN(c *gin.Context) {
 		absentParameter(p.Tid, "code", c)
 		return
 	}
+	dnMessage, _ := y.conf.DNCode[p.Params.Code]
+
 	p.Params.Timestamp, ok = c.GetQuery("timestamp")
 	if !ok {
 		m.Errors.Inc()
@@ -304,6 +307,7 @@ func (y *Yondu) DN(c *gin.Context) {
 		logCtx.WithFields(log.Fields{
 			"msisdn": p.Params.Msisdn,
 			"rrn":    p.Params.RRN,
+			"dn":     dnMessage,
 		}).Info("sent")
 	}
 }
@@ -331,7 +335,7 @@ func (y *Yondu) MO(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"tid": p.Tid,
 	})
-	logCtx.Debugf("url: %s", p.Raw)
+	c.Set("tid", p.Tid)
 
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
@@ -413,10 +417,15 @@ func AccessHandler(c *gin.Context) {
 		path = path + "?" + c.Request.URL.RawQuery
 
 	}
+
 	fields := log.Fields{
 		"method": c.Request.Method,
 		"url":    path,
 		"since":  responseTime,
+	}
+	tid, found := c.Get("tid")
+	if found {
+		fields["tid"] = tid
 	}
 	if len(c.Errors) > 0 {
 		fields["error"] = c.Errors.String()

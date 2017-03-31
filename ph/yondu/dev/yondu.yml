@@ -22,6 +22,20 @@ yondu:
     200: Successfully received the request and ready to process
     400: Invalid key / Incomplete Parameters / Invalid Keyword
     500: Write Error
+  dn_code:
+    200: Success. Successfully charged
+    201: Success. Successfully charged
+    400: Authentication Error. Credentials error to telco
+    401: Subscriber not found
+    402: Subscriber mobile number is not active
+    411: GHP Subscriber has insufficient balance Insufficient balance to all Prepaid/GHP subscribers
+    412: EricssonInsuffBal.  Insufficient balance to all Touch Mobile subscribers
+    414: StatusInactive. Postpaid subscriber is inactive
+    416: ServerError. Current service is down or inactive
+    500: ReadTimeout. Current service is down or inactive
+    503: CSP Error. Telco problem to connect in CSP platform / App is not provisioned for charging or this rate / Charging amount is not provision / System is busy / Connection problem to telco
+    1001: No Response. Cannot connect Telco API after 3 attempts
+    1002: Connection Refused. Cannot access Telco API
   tariff:
     250: play_250 # for 2.50 tariff (charging only)
     1000: play_1000 # for 10.00 tariff (charging only)

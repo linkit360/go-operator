@@ -8,7 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	m "github.com/vostrok/operator/pk/mobilink/src/metrics"
+	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
 )
 
 // get records to send sms from queue *_sms_requests
