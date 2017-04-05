@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -17,39 +16,12 @@ import (
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
 	m "github.com/linkit360/go-operator/ru/beeline/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
-	"github.com/linkit360/go-utils/amqp"
 	rec "github.com/linkit360/go-utils/rec"
 )
 
-type SmppMessage struct {
-	Fields    map[string]string           `json:"fields"`
-	TlvFields map[pdufield.TLVType]string `json:"tlv_types"`
-	Headers   pdu.Header
-}
-
-func (svc *Service) pduHandler(p pdu.Body) {
+func pduHandler(p pdu.Body) {
 	m.Incoming.Inc()
-	var b bytes.Buffer
-	err := p.SerializeTo(&b)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Debug("serialize")
-		return
-	}
-	// "\x00\x00\x00@\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x0179661904936\x00\x03\x018580#3\x00\x00\x00\x01\x00\x00\x00\x00\b\x00\f\x04!\x04B\x04>\x04?\x001\x00 "
-	//"&pdu.codec{h:(*pdu.Header)(0xc420201d00), l:pdufield.List{\"service_type\", \"source_addr_ton\", \"source_addr_npi\", \"source_addr\", \"dest_add
-	//r_ton\", \"dest_addr_npi\", \"destination_addr\", \"esm_class\", \"protocol_id\", \"priority_flag\", \"schedule_delivery_time\", \"validity_period\", \"registered_delivery\", \"replace_if_present_flag\",
-	//\"data_coding\", \"sm_default_msg_id\", \"sm_length\", \"short_message\"}, f:pdufield.Map{\"schedule_delivery_time\":(*pdufield.Variable)(0xc42020f5a0), \"service_type\":(*pdufield.Variable)(0xc42020f540)
-	//, \"source_addr_ton\":(*pdufield.Fixed)(0xc420201d10), \"source_addr_npi\":(*pdufield.Fixed)(0xc420201d11), \"source_addr\":(*pdufield.Variable)(0xc42020f560), \"dest_addr_npi\":(*pdufield.Fixed)(0xc42020
-	//1d13), \"destination_addr\":(*pdufield.Variable)(0xc42020f580), \"priority_flag\":(*pdufield.Fixed)(0xc420201d32), \"sm_default_msg_id\":(*pdufield.Fixed)(0xc420201d4b), \"dest_addr_ton\":(*pdufield.Fixed
-	//)(0xc420201d12), \"registered_delivery\":(*pdufield.Fixed)(0xc420201d48), \"sm_length\":(*pdufield.Fixed)(0xc420201d4c), \"short_message\":(*pdufield.SM)(0xc42020f5e0), \"protocol_id\":(*pdufield.Fixed)(0
-	//xc420201d31), \"validity_period\":(*pdufield.Variable)(0xc42020f5c0), \"data_coding\":(*pdufield.Fixed)(0xc420201d4a), \"esm_class\":(*pdufield.Fixed)(0xc420201d30), \"replace_if_present_flag\":(*pdufield
-	//.Fixed)(0xc420201d49)}, t:pdufield.TLVMap{0x20a:(*pdufield.TLVBody)(0xc42020f600)}}
-
-	log.WithFields(log.Fields{
-		"msgee": b.String(),
-	}).Debug("process")
+	var err error
 
 	//var err error
 	f := p.Fields()
@@ -60,32 +32,33 @@ func (svc *Service) pduHandler(p pdu.Body) {
 		"len":         h.Len,
 		"seq":         h.Seq,
 		"status":      h.Status,
-		"msisdn":      string(f[pdufield.SourceAddr].Bytes()),
-		"sn":          string(f[pdufield.ShortMessage].Bytes()),
-		"dst":         string(f[pdufield.DestinationAddr].Bytes()),
-		"source_port": string(tlv[pdufield.SourcePort].Bytes()),
+		"msisdn":      field(f, pdufield.SourceAddr),
+		"sn":          field(f, pdufield.ShortMessage),
+		"dst":         field(f, pdufield.DestinationAddr),
+		"source_port": tlvfield(tlv, pdufield.SourcePort),
 	}).Debug("pdu")
 
 	r := &rec.Record{
 		Tid:           rec.GenerateTID(),
 		CountryCode:   svc.conf.Beeline.CountryCode,
 		OperatorCode:  svc.conf.Beeline.MccMnc,
-		Msisdn:        string(f[pdufield.SourceAddr].Bytes()),
+		Msisdn:        field(f, pdufield.SourceAddr),
 		OperatorToken: strconv.FormatUint(uint64(h.Seq), 10),
-		Notice:        string(f[pdufield.ShortMessage].Bytes()),
+		Notice:        field(f, pdufield.ShortMessage),
 	}
+
 	defer logRequests(r.Tid, p, err)
 
-	_, err = resolveRec(string(f[pdufield.DestinationAddr].Bytes()), r)
+	log.WithFields(log.Fields{
+		"fields": fmt.Sprintf("%#v", f),
+	}).Debug("process")
+
+	//_, err = resolveRec(string(f[pdufield.DestinationAddr].Bytes()), r)
 	if err != nil {
 		return
 	}
 
-	log.WithFields(log.Fields{
-		"msgee": fmt.Sprintf("%#v", p),
-	}).Debug("process")
-
-	switch string(tlv[pdufield.SourcePort].Bytes()) {
+	switch tlvfield(tlv, pdufield.SourcePort) {
 	case "3": // subscription enabled
 	case "4": // subscritpion disabled
 	case "5": // charge notify. charged <sum> rub. Next date ...
@@ -94,6 +67,22 @@ func (svc *Service) pduHandler(p pdu.Body) {
 	case "7": // block subscriber
 	case "9": // msisdn change
 	}
+}
+
+func tlvfield(f pdufield.TLVMap, name pdufield.TLVType) string {
+	v, ok := f[name]
+	if !ok {
+		return ""
+	}
+	return string(v.Bytes())
+}
+
+func field(f pdufield.Map, name pdufield.Name) string {
+	v, ok := f[name]
+	if !ok {
+		return ""
+	}
+	return string(v.Bytes())
 }
 
 func resolveRec(dstAddress string, r *rec.Record) (
@@ -113,7 +102,7 @@ func resolveRec(dstAddress string, r *rec.Record) (
 		}).Error("cann't process")
 		return
 	}
-	serviceToken := dstAddress[0:4]
+	serviceToken := dstAddress[0:4] // short number
 	campaign, err := inmem_client.GetCampaignByKeyWord(serviceToken)
 	if err != nil {
 		m.Errors.Inc()
@@ -183,80 +172,54 @@ func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
 	svc.publishTransactionLog(tl)
 }
 
-func unsubscribeAll(msg rec.Record) error {
-	return _notifyDBAction("UnsubscribeAll", &msg)
+func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
+	if svc.transceiver == nil {
+		reConnect(conf, receiverFn)
+	}
+	return
 }
-func _notifyDBAction(eventName string, msg *rec.Record) (err error) {
-	msg.SentAt = time.Now().UTC()
-	defer func() {
-		if err != nil {
-			fields := log.Fields{
-				"data":  fmt.Sprintf("%#v", msg),
-				"q":     svc.conf.Beeline.Queue.DBActions,
-				"event": eventName,
-				"error": fmt.Errorf(eventName+": %s", err.Error()),
-			}
-			log.WithFields(fields).Error("cannot send")
-		} else {
-			fields := log.Fields{
-				"event":    eventName,
-				"tid":      msg.Tid,
-				"status":   msg.SubscriptionStatus,
-				"periodic": msg.Periodic,
-				"q":        svc.conf.Beeline.Queue.DBActions,
-			}
-			log.WithFields(fields).Info("sent")
-		}
-	}()
 
-	if eventName == "" {
-		err = fmt.Errorf("QueueSend: %s", "Empty event name")
-		return
-	}
-
-	event := amqp.EventNotify{
-		EventName: eventName,
-		EventData: msg,
-	}
-	var body []byte
-	body, err = json.Marshal(event)
-
-	if err != nil {
-		err = fmt.Errorf(eventName+" json.Marshal: %s", err.Error())
-		return
-	}
-	svc.notifier.Publish(amqp.AMQPMessage{
-		QueueName: svc.conf.Beeline.Queue.DBActions,
-		Body:      body,
-	})
-	return nil
-}
-func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) *smpp_client.Transceiver {
-	smppTransceiver := &smpp_client.Transceiver{
+func reConnect(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
+	log.Info("smpp transceiver init...")
+	svc.transceiver = &smpp_client.Transceiver{
 		Addr:        conf.Addr,
 		User:        conf.User,
 		Passwd:      conf.Password,
 		RespTimeout: time.Duration(conf.Timeout) * time.Second,
 		Handler:     receiverFn,
 	}
-	connStatus := smppTransceiver.Bind()
-	go func() {
+
+	for {
+		connStatus := svc.transceiver.Bind()
+
 		for c := range connStatus {
+			if c == nil {
+				log.WithFields(log.Fields{
+					"status": c,
+					"t":      svc.transceiver,
+				}).Info("status is nil")
+				break
+			}
 			if c.Status().String() != "Connected" {
 				m.SMPPConnected.Set(0)
+				m.SMPPReconnectCount.Inc()
 				log.WithFields(log.Fields{
 					"user":   conf.User,
 					"status": c.Status().String(),
 					"error":  "disconnected: " + c.Error().Error(),
 				}).Error("smpp connect failed")
+				log.WithField("reconnectDelay", conf.ReconnectDelay).Info("smpp reconnects...")
+				time.Sleep(time.Duration(conf.ReconnectDelay) * time.Second)
 			} else {
 				log.WithFields(log.Fields{
 					"status": c.Status().String(),
 				}).Info("smpp connect ok")
 				m.SMPPConnected.Set(1)
+				m.SMPPReconnectCount.Set(0)
+				break
 			}
 		}
-	}()
+	}
+
 	log.Info("smpp transmitter init done")
-	return smppTransceiver
 }

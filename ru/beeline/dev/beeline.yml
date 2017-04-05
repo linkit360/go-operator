@@ -23,6 +23,11 @@ beeline:
   queues:
     transaction_log: transaction_log
   smpp:
+    addr: 127.0.0.1:2775
+    user: smppclient1
+    pass: password
+    timeout: 10
+    reconnect_delay: 10
 
 
 consumer:

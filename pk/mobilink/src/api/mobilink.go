@@ -315,10 +315,9 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
 	m.SmsSuccess.Inc()
 	shortMsg, err := mb.smpp.Submit(&smpp_client.ShortMessage{
-		Src:      mb.conf.Connection.Smpp.ShortNumber,
-		Dst:      "00" + msisdn[2:],
-		Text:     pdutext.Raw(msg),
-		Register: smpp_client.NoDeliveryReceipt,
+		Src:  mb.conf.Connection.Smpp.ShortNumber,
+		Dst:  "00" + msisdn[2:],
+		Text: pdutext.Raw(msg),
 	})
 
 	if err == smpp_client.ErrNotConnected {

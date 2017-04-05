@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-
+	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -43,7 +43,7 @@ func InitService(
 ) {
 
 	log.SetLevel(log.DebugLevel)
-	svc := Service{
+	svc = Service{
 		responseLog: logger.GetFileLogger(beeConf.TransactionLogFilePath.ResponseLogPath),
 		requestLog:  logger.GetFileLogger(beeConf.TransactionLogFilePath.RequestLogPath),
 	}
@@ -52,7 +52,7 @@ func InitService(
 		Notifier: notifierConfig,
 		Beeline:  beeConf,
 	}
-	svc.transceiver = initTransceiver(beeConf.SMPP, svc.pduHandler)
+	initTransceiver(beeConf.SMPP, pduHandler)
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 
 	if err := inmem_client.Init(inMemConfig); err != nil {
@@ -62,15 +62,19 @@ func InitService(
 
 func logRequests(tid string, p pdu.Body, err error) {
 	f := p.Fields()
+	h := p.Header()
 	tlv := p.TLVFields()
 	fields := log.Fields{
-		"tid":           tid,
-		"seq":           p.Header().Seq,
-		"source_port":   string(tlv[pdufield.SourcePort].Bytes()),
-		"source":        f[pdufield.SourceAddr].String(),
-		"dst":           f[pdufield.DestinationAddr].String(),
-		"short_message": f[pdufield.ShortMessage].String(),
+		"id":          h.ID,
+		"len":         h.Len,
+		"seq":         h.Seq,
+		"status":      h.Status,
+		"msisdn":      field(f, pdufield.SourceAddr),
+		"sn":          field(f, pdufield.ShortMessage),
+		"dst":         field(f, pdufield.DestinationAddr),
+		"source_port": tlvfield(tlv, pdufield.SourcePort),
 	}
+
 	if err != nil {
 		fields["error"] = err.Error()
 	}
@@ -110,5 +114,57 @@ func (svc *Service) publishTransactionLog(tl transaction_log_service.OperatorTra
 }
 
 func OnExit() {
-	defer svc.transceiver.Close()
+	log.WithField("pid", os.Getpid()).Info("close transiever conn")
+	if svc.transceiver != nil {
+		svc.transceiver.Close()
+	}
+}
+
+func unsubscribeAll(msg rec.Record) error {
+	return _notifyDBAction("UnsubscribeAll", &msg)
+}
+func _notifyDBAction(eventName string, msg *rec.Record) (err error) {
+	msg.SentAt = time.Now().UTC()
+	defer func() {
+		if err != nil {
+			fields := log.Fields{
+				"data":  fmt.Sprintf("%#v", msg),
+				"q":     svc.conf.Beeline.Queue.DBActions,
+				"event": eventName,
+				"error": fmt.Errorf(eventName+": %s", err.Error()),
+			}
+			log.WithFields(fields).Error("cannot send")
+		} else {
+			fields := log.Fields{
+				"event":    eventName,
+				"tid":      msg.Tid,
+				"status":   msg.SubscriptionStatus,
+				"periodic": msg.Periodic,
+				"q":        svc.conf.Beeline.Queue.DBActions,
+			}
+			log.WithFields(fields).Info("sent")
+		}
+	}()
+
+	if eventName == "" {
+		err = fmt.Errorf("QueueSend: %s", "Empty event name")
+		return
+	}
+
+	event := amqp.EventNotify{
+		EventName: eventName,
+		EventData: msg,
+	}
+	var body []byte
+	body, err = json.Marshal(event)
+
+	if err != nil {
+		err = fmt.Errorf(eventName+" json.Marshal: %s", err.Error())
+		return
+	}
+	svc.notifier.Publish(amqp.AMQPMessage{
+		QueueName: svc.conf.Beeline.Queue.DBActions,
+		Body:      body,
+	})
+	return nil
 }

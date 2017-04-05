@@ -31,12 +31,7 @@ type AppConfig struct {
 	Publisher amqp.NotifierConfig       `yaml:"publisher"`
 	InMem     inmem_client.ClientConfig `yaml:"inmem"`
 }
-type SmppConfig struct {
-	Addr     string `yaml:"addr" default:"217.118.84.12:3340"`
-	User     string `yaml:"user" default:"1637571"`
-	Password string `yaml:"pass" default:"wBy4E2Tz"`
-	Timeout  int    `yaml:"timeout"`
-}
+
 type BeelineConfig struct {
 	Name                   string               `yaml:"name"`
 	MccMnc                 int64                `yaml:"mccmnc"`
@@ -45,6 +40,14 @@ type BeelineConfig struct {
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  BeelineQueuesConfig  `yaml:"queues"`
 	SMPP                   SmppConfig           `yaml:"smpp"`
+}
+
+type SmppConfig struct {
+	Addr           string `yaml:"addr"`
+	User           string `yaml:"user"`
+	Password       string `yaml:"pass"`
+	Timeout        int    `yaml:"timeout"`
+	ReconnectDelay int    `yaml:"reconnect_delay"`
 }
 
 type ThrottleConfig struct {

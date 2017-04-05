@@ -9,17 +9,18 @@ import (
 )
 
 var (
-	Incoming         m.Gauge
-	Success          m.Gauge
-	Errors           m.Gauge
-	AbsentParameter  m.Gauge
-	PageNotFound     m.Gauge
-	Dropped          m.Gauge
-	Empty            m.Gauge
-	NotifyErrors     m.Gauge
-	MOParseTimeError m.Gauge
-	WrongServiceKey  m.Gauge
-	SMPPConnected    prometheus.Gauge
+	Incoming           m.Gauge
+	Success            m.Gauge
+	Errors             m.Gauge
+	AbsentParameter    m.Gauge
+	PageNotFound       m.Gauge
+	Dropped            m.Gauge
+	Empty              m.Gauge
+	NotifyErrors       m.Gauge
+	MOParseTimeError   m.Gauge
+	WrongServiceKey    m.Gauge
+	SMPPConnected      prometheus.Gauge
+	SMPPReconnectCount prometheus.Gauge
 )
 
 func Init(appName string) {
@@ -35,6 +36,7 @@ func Init(appName string) {
 	MOParseTimeError = m.NewGauge("", appName, "mo_parse_time_errors", "parse time errors")
 	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
 	SMPPConnected = m.PrometheusGauge("", appName, "smpp_connected", "smpp connected")
+	SMPPReconnectCount = m.PrometheusGauge("", appName, "smpp_reconnect_count", "smpp reconnect count")
 
 	go func() {
 		for range time.Tick(time.Minute) {

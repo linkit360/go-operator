@@ -47,3 +47,7 @@ func notFound(c *gin.Context) {
 	metrics.PageNotFound.Inc()
 	c.JSON(404, struct{}{})
 }
+
+func OnExit() {
+	service.OnExit()
+}
