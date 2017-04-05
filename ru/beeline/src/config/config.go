@@ -60,7 +60,7 @@ type TransactionLogConfig struct {
 }
 type BeelineQueuesConfig struct {
 	MO             string `yaml:"mo" default:"beeline_mo"`
-	DBActions      string `yaml:"db_actions"`
+	DBActions      string `yaml:"db_actions" default:"mt_manager"`
 	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
 }
 

@@ -10,12 +10,8 @@ inmem_client:
 
 beeline:
   name: beeline
-  mcc: 520
-  mnc: 05
-  country_code: 66
-  timeout: 40
-  api_url:
-  location: Asia/Karachi
+  mccmnc: 25099
+  country_code: 7
   short_number: 8580
   transaction_log:
     response: /var/log/linkit/response_beeline.log
@@ -40,7 +36,6 @@ consumer:
 
 publisher:
   chan_capacity: 100
-  pending_buffer_path: /home/centos/linkit/beeline_pending.json
   conn:
     user: linkit
     pass: dg-U_oHhy7-

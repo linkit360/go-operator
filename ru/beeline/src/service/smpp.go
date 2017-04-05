@@ -1,6 +1,8 @@
 package service
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -27,81 +29,137 @@ func pduHandler(p pdu.Body) {
 	f := p.Fields()
 	h := p.Header()
 	tlv := p.TLVFields()
-	log.WithFields(log.Fields{
-		"id":          h.ID,
-		"len":         h.Len,
-		"seq":         h.Seq,
-		"status":      h.Status,
-		"msisdn":      field(f, pdufield.SourceAddr),
-		"sn":          field(f, pdufield.ShortMessage),
-		"dst":         field(f, pdufield.DestinationAddr),
-		"source_port": tlvfield(tlv, pdufield.SourcePort),
-	}).Debug("pdu")
+
+	sourcePort := tlvfieldi(tlv, pdufield.SourcePort)
+	dstAddr := field(f, pdufield.DestinationAddr)
+	shortMessage := field(f, pdufield.ShortMessage)
+	sourceAddr := field(f, pdufield.SourceAddr)
 
 	r := &rec.Record{
 		Tid:           rec.GenerateTID(),
 		CountryCode:   svc.conf.Beeline.CountryCode,
 		OperatorCode:  svc.conf.Beeline.MccMnc,
-		Msisdn:        field(f, pdufield.SourceAddr),
+		Msisdn:        sourceAddr,
 		OperatorToken: strconv.FormatUint(uint64(h.Seq), 10),
-		Notice:        field(f, pdufield.ShortMessage),
+		Notice:        shortMessage + fmt.Sprintf(" source_port: %v", sourcePort),
 	}
+	logCtx := log.WithField("tid", r.Tid)
 
-	defer logRequests(r.Tid, p, err)
+	fields := log.Fields{
+		"tid":          r.Tid,
+		"id":           h.ID,
+		"len":          h.Len,
+		"seq":          h.Seq,
+		"status":       h.Status,
+		"msisdn":       sourceAddr,
+		"dst":          dstAddr,
+		"source_port":  sourcePort,
+		"shot_message": shortMessage,
+	}
+	log.WithFields(fields).Debug("pdu")
+	defer logRequests(*r, fields, err)
 
-	log.WithFields(log.Fields{
-		"fields": fmt.Sprintf("%#v", f),
-	}).Debug("process")
+	fieldsJSON, _ := json.Marshal(fields)
 
-	//_, err = resolveRec(string(f[pdufield.DestinationAddr].Bytes()), r)
+	_, err = resolveRec(dstAddr, r)
+	tl := transaction_log_service.OperatorTransactionLog{
+		Tid:           r.Tid,
+		Msisdn:        r.Msisdn,
+		OperatorToken: r.OperatorToken,
+		OperatorCode:  r.OperatorCode,
+		CountryCode:   r.CountryCode,
+		Error:         r.OperatorErr,
+		Price:         r.Price,
+		ServiceId:     r.ServiceId,
+		CampaignId:    r.CampaignId,
+		RequestBody:   string(fieldsJSON),
+		ResponseBody:  "",
+		ResponseCode:  200,
+		Notice:        r.Notice,
+		Type:          "smpp",
+	}
 	if err != nil {
+		svc.publishTransactionLog(tl)
 		return
 	}
 
-	switch tlvfield(tlv, pdufield.SourcePort) {
-	case "3": // subscription enabled
-	case "4": // subscritpion disabled
-	case "5": // charge notify. charged <sum> rub. Next date ...
-	case "6": // block_subscribtion - unsubscribe
+	switch sourcePort {
+	case 3:
+		tl.ResponseDecision = "subscription enabled"
+		logCtx.Debug(tl.ResponseDecision)
+		newSubscription(*r)
+
+	case 4:
+		tl.ResponseDecision = "subscription disabled"
+		r.SubscriptionStatus = "canceled"
+		logCtx.Debug(tl.ResponseDecision)
+		unsubscribe(*r)
+	case 5:
+		logCtx.Debug("charge notify")
+		r.Paid = true
+		r.SubscriptionStatus = "paid"
+		r.Result = "paid"
+		chargeNotify(*r)
+	case 6:
+		tl.ResponseDecision = "unsubscribe all"
+		logCtx.Debug(tl.ResponseDecision)
+		r.SubscriptionStatus = "canceled"
 		unsubscribeAll(*r)
-	case "7": // block subscriber
-	case "9": // msisdn change
+	case 1:
+		tl.ResponseDecision = "unsubscribe all"
+		logCtx.Debug(tl.ResponseDecision)
+		r.SubscriptionStatus = "canceled"
+		unsubscribeAll(*r)
+	case 7:
+		tl.ResponseDecision = "block"
+		logCtx.Debug(tl.ResponseDecision)
+	case 9:
+		tl.ResponseDecision = "msisdn migration"
+		logCtx.Debug(tl.ResponseDecision)
 	}
+	svc.publishTransactionLog(tl)
 }
 
-func tlvfield(f pdufield.TLVMap, name pdufield.TLVType) string {
+func tlvfieldi(f pdufield.TLVMap, name pdufield.TLVType) (field uint16) {
 	v, ok := f[name]
-	if !ok {
-		return ""
+	if !ok || v == nil {
+		return
 	}
-	return string(v.Bytes())
+
+	buf := bytes.NewReader(v.Bytes())
+	err := binary.Read(buf, binary.BigEndian, &field)
+	if err != nil {
+		fmt.Println("binary.Read failed:", err)
+		return
+	}
+
+	return
 }
 
 func field(f pdufield.Map, name pdufield.Name) string {
 	v, ok := f[name]
-	if !ok {
+	if !ok || v == nil {
 		return ""
 	}
-	return string(v.Bytes())
+	return v.String()
 }
 
-func resolveRec(dstAddress string, r *rec.Record) (
-	service inmem_service.Service,
-	err error,
-) {
+func resolveRec(dstAddress string, r *rec.Record) (service inmem_service.Service, err error) {
 	logCtx := log.WithField("tid", r.Tid)
 
-	if dstAddress == "" {
+	if len(dstAddress) < 4 {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
 
 		err = fmt.Errorf("dstAddr required%s", "")
 
 		logCtx.WithFields(log.Fields{
-			"error": "dstAddress is empty",
+			"dstAddr": dstAddress,
+			"error":   "dstAddress is wrong",
 		}).Error("cann't process")
 		return
 	}
+
 	serviceToken := dstAddress[0:4] // short number
 	campaign, err := inmem_client.GetCampaignByKeyWord(serviceToken)
 	if err != nil {
@@ -115,9 +173,6 @@ func resolveRec(dstAddress string, r *rec.Record) (
 
 		return
 	}
-	logCtx.WithFields(log.Fields{
-		"campaign": fmt.Sprintf("%#v", campaign),
-	}).Debug("process")
 
 	r.CampaignId = campaign.Id
 	r.ServiceId = campaign.ServiceId
@@ -132,44 +187,13 @@ func resolveRec(dstAddress string, r *rec.Record) (
 		}).Error("cannot get service by id")
 		return
 	}
-	logCtx.WithFields(log.Fields{
-		"service": fmt.Sprintf("%#v", service),
-	}).Debug("process")
 
-	r.Price = int(service.Price)
+	r.Price = int(service.Price) * 100
 	r.DelayHours = service.DelayHours
 	r.PaidHours = service.PaidHours
 	r.KeepDays = service.KeepDays
 	r.Periodic = false
 	return
-}
-
-func (svc *Service) transactionLog(p pdu.Body, r *rec.Record) {
-	sentAt := time.Now().UTC()
-	f := p.Fields()
-	tlv := p.TLVFields()
-
-	body, _ := json.Marshal(p)
-
-	tl := transaction_log_service.OperatorTransactionLog{
-		Tid:              r.Tid,
-		Msisdn:           r.Msisdn,
-		OperatorToken:    r.OperatorToken,
-		OperatorCode:     r.OperatorCode,
-		CountryCode:      r.CountryCode,
-		Error:            r.OperatorErr,
-		Price:            r.Price,
-		ServiceId:        r.ServiceId,
-		CampaignId:       r.CampaignId,
-		RequestBody:      string(body),
-		ResponseBody:     "",
-		ResponseDecision: string(tlv[pdufield.SourcePort].Bytes()),
-		ResponseCode:     200,
-		SentAt:           sentAt,
-		Notice:           f[pdufield.ShortMessage].String(),
-		Type:             "smpp",
-	}
-	svc.publishTransactionLog(tl)
 }
 
 func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
