@@ -14,11 +14,6 @@ var (
 	Errors             m.Gauge
 	AbsentParameter    m.Gauge
 	PageNotFound       m.Gauge
-	Dropped            m.Gauge
-	Empty              m.Gauge
-	NotifyErrors       m.Gauge
-	MOParseTimeError   m.Gauge
-	WrongServiceKey    m.Gauge
 	SMPPConnected      prometheus.Gauge
 	SMPPReconnectCount prometheus.Gauge
 )
@@ -30,11 +25,6 @@ func Init(appName string) {
 	Errors = m.NewGauge("", "", "errors", "errors")
 	AbsentParameter = m.NewGauge("", appName, "adsent_parameter", "wrong parameters")
 	PageNotFound = m.NewGauge("", appName, "404_page_not_found", "404 page not found")
-	Dropped = m.NewGauge("", appName, "dropped", "queue dropped")
-	Empty = m.NewGauge("", appName, "empty", "queue empty")
-	NotifyErrors = m.NewGauge("", appName, "notify_errors", "notify errors")
-	MOParseTimeError = m.NewGauge("", appName, "mo_parse_time_errors", "parse time errors")
-	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
 	SMPPConnected = m.PrometheusGauge("", appName, "smpp_connected", "smpp connected")
 	SMPPReconnectCount = m.PrometheusGauge("", appName, "smpp_reconnect_count", "smpp reconnect count")
 
@@ -45,11 +35,6 @@ func Init(appName string) {
 			Errors.Update()
 			AbsentParameter.Update()
 			PageNotFound.Update()
-			Dropped.Update()
-			Empty.Update()
-			NotifyErrors.Update()
-			MOParseTimeError.Update()
-			WrongServiceKey.Update()
 		}
 	}()
 }

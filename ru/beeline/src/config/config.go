@@ -34,8 +34,6 @@ type AppConfig struct {
 
 type BeelineConfig struct {
 	Name                   string               `yaml:"name"`
-	MccMnc                 int64                `yaml:"mccmnc"`
-	CountryCode            int64                `yaml:"country_code"`
 	ShortNUmber            string               `yaml:"short_number"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  BeelineQueuesConfig  `yaml:"queues"`
@@ -59,9 +57,7 @@ type TransactionLogConfig struct {
 	RequestLogPath  string `default:"/var/log/linkit/request_beeline.log" yaml:"request"`
 }
 type BeelineQueuesConfig struct {
-	MO             string `yaml:"mo" default:"beeline_mo"`
-	DBActions      string `yaml:"db_actions" default:"mt_manager"`
-	TransactionLog string `yaml:"transaction_log" default:"transaction_log"`
+	SMPPIn string `yaml:"smpp" default:"beeline_smpp"`
 }
 
 func LoadConfig() AppConfig {

@@ -3,9 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,111 +11,66 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
-	inmem_service "github.com/linkit360/go-inmem/service"
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
 	m "github.com/linkit360/go-operator/ru/beeline/src/metrics"
-	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
-	rec "github.com/linkit360/go-utils/rec"
+	"github.com/linkit360/go-utils/rec"
 )
+
+type Incoming struct {
+	Tid          string    `json:"tid"`
+	Seq          string    `json:"seq"`
+	SentAt       time.Time `json:"sent_at"`
+	SourcePort   uint16    `json:"source_port"`
+	DstAddr      string    `json:"dst_addres"`
+	ShortMessage string    `json:"short_message"`
+	SourceAddr   string    `json:"source_addr"`
+}
 
 func pduHandler(p pdu.Body) {
 	m.Incoming.Inc()
-	var err error
 
-	//var err error
 	f := p.Fields()
 	h := p.Header()
 	tlv := p.TLVFields()
 
-	sourcePort := tlvfieldi(tlv, pdufield.SourcePort)
-	dstAddr := field(f, pdufield.DestinationAddr)
-	shortMessage := field(f, pdufield.ShortMessage)
-	sourceAddr := field(f, pdufield.SourceAddr)
-
-	r := &rec.Record{
-		Tid:           rec.GenerateTID(),
-		CountryCode:   svc.conf.Beeline.CountryCode,
-		OperatorCode:  svc.conf.Beeline.MccMnc,
-		Msisdn:        sourceAddr,
-		OperatorToken: strconv.FormatUint(uint64(h.Seq), 10),
-		Notice:        shortMessage + fmt.Sprintf(" source_port: %v", sourcePort),
+	i := Incoming{
+		Tid:          rec.GenerateTID(),
+		Seq:          fmt.Sprintf("%v", h.Seq),
+		SentAt:       time.Now().UTC(),
+		SourcePort:   tlvfieldi(tlv, pdufield.SourcePort),
+		DstAddr:      field(f, pdufield.DestinationAddr),
+		ShortMessage: field(f, pdufield.ShortMessage),
+		SourceAddr:   field(f, pdufield.SourceAddr),
 	}
-	logCtx := log.WithField("tid", r.Tid)
 
 	fields := log.Fields{
-		"tid":          r.Tid,
 		"id":           h.ID,
 		"len":          h.Len,
 		"seq":          h.Seq,
 		"status":       h.Status,
-		"msisdn":       sourceAddr,
-		"dst":          dstAddr,
-		"source_port":  sourcePort,
-		"shot_message": shortMessage,
+		"tid":          i.Tid,
+		"sent_at":      i.SentAt,
+		"msisdn":       i.SourceAddr,
+		"dst":          i.DstAddr,
+		"source_port":  i.SourcePort,
+		"shot_message": i.ShortMessage,
 	}
 	log.WithFields(fields).Debug("pdu")
-	defer logRequests(*r, fields, err)
+	svc.requestLog.WithFields(fields).Println(".")
 
-	fieldsJSON, _ := json.Marshal(fields)
+	if len(i.DstAddr) < 4 {
+		m.AbsentParameter.Inc()
+		m.Errors.Inc()
 
-	_, err = resolveRec(dstAddr, r)
-	tl := transaction_log_service.OperatorTransactionLog{
-		Tid:           r.Tid,
-		Msisdn:        r.Msisdn,
-		OperatorToken: r.OperatorToken,
-		OperatorCode:  r.OperatorCode,
-		CountryCode:   r.CountryCode,
-		Error:         r.OperatorErr,
-		Price:         r.Price,
-		ServiceId:     r.ServiceId,
-		CampaignId:    r.CampaignId,
-		RequestBody:   string(fieldsJSON),
-		ResponseBody:  "",
-		ResponseCode:  200,
-		Notice:        r.Notice,
-		Type:          "smpp",
-	}
-	if err != nil {
-		svc.publishTransactionLog(tl)
+		log.WithFields(log.Fields{
+			"dstAddr": i.DstAddr,
+			"error":   "addr is wrong",
+		}).Error("cann't process")
 		return
 	}
-
-	switch sourcePort {
-	case 3:
-		tl.ResponseDecision = "subscription enabled"
-		logCtx.Debug(tl.ResponseDecision)
-		newSubscription(*r)
-
-	case 4:
-		tl.ResponseDecision = "subscription disabled"
-		r.SubscriptionStatus = "canceled"
-		logCtx.Debug(tl.ResponseDecision)
-		unsubscribe(*r)
-	case 5:
-		logCtx.Debug("charge notify")
-		r.Paid = true
-		r.SubscriptionStatus = "paid"
-		r.Result = "paid"
-		chargeNotify(*r)
-	case 6:
-		tl.ResponseDecision = "unsubscribe all"
-		logCtx.Debug(tl.ResponseDecision)
-		r.SubscriptionStatus = "canceled"
-		unsubscribeAll(*r)
-	case 1:
-		tl.ResponseDecision = "unsubscribe all"
-		logCtx.Debug(tl.ResponseDecision)
-		r.SubscriptionStatus = "canceled"
-		unsubscribeAll(*r)
-	case 7:
-		tl.ResponseDecision = "block"
-		logCtx.Debug(tl.ResponseDecision)
-	case 9:
-		tl.ResponseDecision = "msisdn migration"
-		logCtx.Debug(tl.ResponseDecision)
+	if err := publish(i); err != nil {
+		m.Success.Inc()
 	}
-	svc.publishTransactionLog(tl)
 }
 
 func tlvfieldi(f pdufield.TLVMap, name pdufield.TLVType) (field uint16) {
@@ -144,66 +97,7 @@ func field(f pdufield.Map, name pdufield.Name) string {
 	return v.String()
 }
 
-func resolveRec(dstAddress string, r *rec.Record) (service inmem_service.Service, err error) {
-	logCtx := log.WithField("tid", r.Tid)
-
-	if len(dstAddress) < 4 {
-		m.AbsentParameter.Inc()
-		m.Errors.Inc()
-
-		err = fmt.Errorf("dstAddr required%s", "")
-
-		logCtx.WithFields(log.Fields{
-			"dstAddr": dstAddress,
-			"error":   "dstAddress is wrong",
-		}).Error("cann't process")
-		return
-	}
-
-	serviceToken := dstAddress[0:4] // short number
-	campaign, err := inmem_client.GetCampaignByKeyWord(serviceToken)
-	if err != nil {
-		m.Errors.Inc()
-		err = fmt.Errorf("inmem_client.GetCampaignByKeyWord: %s", err.Error())
-
-		logCtx.WithFields(log.Fields{
-			"serviceToken": serviceToken,
-			"error":        err.Error(),
-		}).Error("cannot find campaign by serviceToken")
-
-		return
-	}
-
-	r.CampaignId = campaign.Id
-	r.ServiceId = campaign.ServiceId
-	service, err = inmem_client.GetServiceById(campaign.ServiceId)
-	if err != nil {
-		m.Errors.Inc()
-
-		err = fmt.Errorf("inmem_client.GetServiceById: %s", err.Error())
-		logCtx.WithFields(log.Fields{
-			"service_id": campaign.ServiceId,
-			"error":      err.Error(),
-		}).Error("cannot get service by id")
-		return
-	}
-
-	r.Price = int(service.Price) * 100
-	r.DelayHours = service.DelayHours
-	r.PaidHours = service.PaidHours
-	r.KeepDays = service.KeepDays
-	r.Periodic = false
-	return
-}
-
-func initTransceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
-	if svc.transceiver == nil {
-		reConnect(conf, receiverFn)
-	}
-	return
-}
-
-func reConnect(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
+func reConnectTranceiver(conf config.SmppConfig, receiverFn func(p pdu.Body)) {
 	log.Info("smpp transceiver init...")
 	svc.transceiver = &smpp_client.Transceiver{
 		Addr:        conf.Addr,
