@@ -11,13 +11,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	smpp_client "github.com/fiorix/go-smpp/smpp"
-	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 	"github.com/gin-gonic/gin"
 
 	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
@@ -135,17 +134,9 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	r.Paid = false
 	r.OperatorToken = msisdn + time.Now().Format("20060102150405")[6:]
 	now := time.Now().In(mb.location).Format("20060102T15:04:05-0700")
-	requestBody := mb.conf.Connection.MT.TarifficateBody
 
-	if mb.conf.AddBalanceServiceId > 0 && r.ServiceId == mb.conf.AddBalanceServiceId {
-		requestBody = strings.Replace(requestBody, "%price%", strconv.Itoa(price), 1)
-		log.WithFields(log.Fields{
-			"tid":    tid,
-			"msisdn": msisdn,
-		}).Info("add balance")
-	} else {
-		requestBody = strings.Replace(requestBody, "%price%", "-"+strconv.Itoa(price), 1)
-	}
+	requestBody := mb.conf.Connection.MT.TarifficateBody
+	requestBody = strings.Replace(requestBody, "%price%", "-"+strconv.Itoa(price), 1)
 	requestBody = strings.Replace(requestBody, "%msisdn%", msisdn[2:], 1)
 	requestBody = strings.Replace(requestBody, "%token%", r.OperatorToken, 1)
 	requestBody = strings.Replace(requestBody, "%time%", now, 1)
@@ -312,47 +303,61 @@ func (mb *Mobilink) mt(r *rec.Record) error {
 	return nil
 }
 
-func (mb *Mobilink) SendSMS(tid, msisdn, msg string) error {
+func (mb *Mobilink) SendSMS(tid, msisdn, msg string) (err error) {
 	m.SmsSuccess.Inc()
-	shortMsg, err := mb.smpp.Submit(&smpp_client.ShortMessage{
-		Src:  mb.conf.Connection.Smpp.ShortNumber,
-		Dst:  "00" + msisdn[2:],
-		Text: pdutext.Raw(msg),
+
+	v := url.Values{}
+	v.Add("username", mb.conf.Connection.Content.User)
+	v.Add("password", mb.conf.Connection.Content.Password)
+	v.Add("from", mb.conf.Connection.Content.From)
+	v.Add("smsc", mb.conf.Connection.Content.SMSC)
+	v.Add("to", msisdn)
+	v.Add("text", msg)
+
+	endpoint := mb.conf.Connection.Content.Endpoint + "?" + v.Encode()
+	logCtx := log.WithFields(log.Fields{
+		"msisdn": msisdn,
+		"msg":    msg,
+		"tid":    tid,
+		"url":    endpoint,
 	})
-
-	if err == smpp_client.ErrNotConnected {
-		m.SmsError.Inc()
-		m.Errors.Inc()
-
-		log.WithFields(log.Fields{
-			"msisdn": msisdn,
-			"msg":    msg,
-			"tid":    tid,
-			"error":  err.Error(),
-		}).Error("counldn't send sms: service unavialable")
-		return fmt.Errorf("smpp.Submit: %s", err.Error())
+	var req *http.Request
+	req, err = http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		err = fmt.Errorf("http.NewRequest: %s", err.Error())
+		logCtx.Error(err.Error())
+		return
 	}
+	req.Close = false
+
+	var resp *http.Response
+	resp, err = mb.client.Do(req)
 	if err != nil {
 		m.SmsError.Inc()
 		m.Errors.Inc()
 
-		log.WithFields(log.Fields{
-			"msisdn": msisdn,
-			"msg":    msg,
-			"tid":    tid,
-			"error":  err.Error(),
-		}).Error("counldn't send sms: bad request")
-		return fmt.Errorf("smpp.Submit: %s", err.Error())
+		err = fmt.Errorf("client.Do: %s", err.Error())
+		logCtx.Error(err.Error())
+		return
 	}
 
-	log.WithFields(log.Fields{
-		"msisdn": msisdn,
-		"msg":    msg,
-		"tid":    tid,
-		"respid": shortMsg.RespID(),
-	}).Info("sms sent")
-	return nil
+	if resp.StatusCode != 200 || resp.StatusCode != 201 {
+		m.SmsError.Inc()
+		m.Errors.Inc()
+
+		err = fmt.Errorf("client.Do status code: %s", resp.Status)
+		logCtx.Error(err.Error())
+		return
+	}
+	bodyText, err := ioutil.ReadAll(resp.Body)
+	logCtx.WithFields(log.Fields{
+		"body":           string(bodyText),
+		"respStatusCode": resp.StatusCode,
+	}).Debug("sms sent")
+
+	return
 }
+
 func getToken(msisdn string) string {
 	return msisdn + time.Now().Format("20060102150405")[6:]
 }

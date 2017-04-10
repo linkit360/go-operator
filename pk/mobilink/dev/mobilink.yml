@@ -40,7 +40,6 @@ mobilink:
     response: /var/log/linkit/response_mobilink.log
     request: /var/log/linkit/request_mobilink.log
   location: Asia/Karachi
-  add_balance_service_id: 1
 
   connection:
     mt:
@@ -189,9 +188,10 @@ mobilink:
         - <value><i4>27</i4></value>
         - <value><i4>70</i4></value>
 
-    smpp:
-      short_number: 4162
-      endpoint: 182.16.255.46:15019
-      user: SLYEPPLA
-      pass: SLYPEE_1
-      timeout: 30
+    content:
+      endpoint: http://localhost:50306/mobilink/paid
+      user: username
+      pass: password
+      from: Slypee
+      smsc: SLYEPPLA
+

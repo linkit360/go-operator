@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"time"
+	"unicode/utf8"
 
 	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
@@ -44,16 +46,16 @@ func pduHandler(p pdu.Body) {
 	}
 
 	fields := log.Fields{
-		"id":           h.ID,
-		"len":          h.Len,
-		"seq":          h.Seq,
-		"status":       h.Status,
-		"tid":          i.Tid,
-		"sent_at":      i.SentAt,
-		"msisdn":       i.SourceAddr,
-		"dst":          i.DstAddr,
-		"source_port":  i.SourcePort,
-		"shot_message": i.ShortMessage,
+		"id":            h.ID,
+		"len":           h.Len,
+		"seq":           h.Seq,
+		"status":        h.Status,
+		"tid":           i.Tid,
+		"sent_at":       i.SentAt,
+		"msisdn":        i.SourceAddr,
+		"dst":           i.DstAddr,
+		"source_port":   i.SourcePort,
+		"short_message": i.ShortMessage,
 	}
 	log.WithFields(fields).Debug("pdu")
 	svc.requestLog.WithFields(fields).Println(".")
@@ -94,6 +96,13 @@ func field(f pdufield.Map, name pdufield.Name) string {
 	if !ok || v == nil {
 		return ""
 	}
+	log.WithFields(log.Fields{
+		"utf8_valid": utf8.Valid(v.Bytes()),
+		"raw":        fmt.Sprintf("%#v", v.Raw()),
+		"string":     v.String(),
+		"ascii":      strconv.QuoteToASCII(v.String()),
+		"name":       fmt.Sprintf("%#v", v.Bytes()),
+	}).Debug("bytes")
 	return v.String()
 }
 
