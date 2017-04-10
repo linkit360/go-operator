@@ -3,12 +3,16 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 
 	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"
+	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
 )
 
 // get records to send sms from queue *_sms_requests
@@ -20,7 +24,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 			"body": string(msg.Body),
 		}).Debug("start process")
 
-		var e EventNotifyUserActions
+		var e EventNotify
 		if err := json.Unmarshal(msg.Body, &e); err != nil {
 			m.Dropped.Inc()
 
@@ -35,17 +39,26 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 		switch {
 		case e.EventName == "send_sms":
 			t := e.EventData
-			if err := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText); err != nil {
-				msg.Ack(false)
-				log.WithFields(log.Fields{
-					"rec":   fmt.Sprintf("%#v", t),
-					"msg":   "requeue",
-					"error": err.Error(),
-				}).Error("can't process")
-				t.OperatorErr = err.Error()
+			tl, smsErr := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
+			if smsErr != nil {
+				t.OperatorErr = smsErr.Error()
 			}
 
-			if err := svc.publishSMSResponse("sms_response", t); err != nil {
+			if err := svc.notifyTransactionLog("sms", transaction_log_service.OperatorTransactionLog{
+				Tid:              t.Tid,
+				Msisdn:           t.Msisdn,
+				OperatorCode:     t.OperatorCode,
+				CountryCode:      t.CountryCode,
+				Error:            t.OperatorErr,
+				Price:            t.Price,
+				ServiceId:        t.ServiceId,
+				SubscriptionId:   t.SubscriptionId,
+				CampaignId:       t.CampaignId,
+				RequestBody:      tl.RequestBody,
+				ResponseBody:     tl.ResponseBody,
+				ResponseDecision: tl.ResponseDecision,
+				ResponseCode:     tl.ResponseCode,
+			}); err != nil {
 				log.WithFields(log.Fields{
 					"event": e.EventName,
 					"tid":   t.Tid,
@@ -58,6 +71,16 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				}).Info("processed successfully")
 
 			}
+			if smsErr != nil {
+				log.WithFields(log.Fields{
+					"rec":   fmt.Sprintf("%#v", t),
+					"error": smsErr.Error(),
+				}).Error("requeue")
+				time.Sleep(time.Second)
+				msg.Nack(false, true)
+				continue
+			}
+
 		default:
 			m.Dropped.Inc()
 
@@ -77,4 +100,72 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 			goto ack
 		}
 	}
+}
+
+func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service.OperatorTransactionLog, err error) {
+
+	m.SmsSuccess.Inc()
+
+	v := url.Values{}
+	v.Add("username", mb.conf.Content.User)
+	v.Add("password", mb.conf.Content.Password)
+	v.Add("from", mb.conf.Content.From)
+	v.Add("smsc", mb.conf.Content.SMSC)
+	v.Add("to", msisdn)
+	v.Add("text", msg)
+
+	endpoint := mb.conf.Content.Endpoint + "?" + v.Encode()
+	logCtx := log.WithFields(log.Fields{
+		"msisdn": msisdn,
+		"msg":    msg,
+		"tid":    tid,
+		"url":    endpoint,
+	})
+	tl.RequestBody = endpoint
+
+	var req *http.Request
+	req, err = http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		err = fmt.Errorf("http.NewRequest: %s", err.Error())
+		logCtx.Error(err.Error())
+		tl.Error = err.Error()
+		tl.ResponseDecision = "failed"
+		return
+	}
+	req.Close = false
+
+	var resp *http.Response
+	resp, err = mb.client.Do(req)
+	if err != nil {
+		m.SmsError.Inc()
+		m.Errors.Inc()
+
+		err = fmt.Errorf("client.Do: %s", err.Error())
+		logCtx.Error(err.Error())
+		tl.Error = err.Error()
+		tl.ResponseDecision = "failed"
+		return
+	}
+	tl.ResponseCode = resp.StatusCode
+
+	if resp.StatusCode != 200 || resp.StatusCode != 201 {
+		m.SmsError.Inc()
+		m.Errors.Inc()
+
+		err = fmt.Errorf("client.Do status code: %s", resp.Status)
+		logCtx.Error(err.Error())
+		tl.Error = err.Error()
+		tl.ResponseDecision = "failed"
+		return
+	}
+	bodyText, err := ioutil.ReadAll(resp.Body)
+	logCtx.WithFields(log.Fields{
+		"body":           string(bodyText),
+		"respStatusCode": resp.StatusCode,
+	}).Debug("sms sent")
+
+	tl.ResponseBody = string(bodyText)
+	tl.ResponseDecision = "sent"
+
+	return
 }
