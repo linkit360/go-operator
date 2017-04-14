@@ -36,6 +36,8 @@ yondu:
     503: CSP Error. Telco problem to connect in CSP platform / App is not provisioned for charging or this rate / Charging amount is not provision / System is busy / Connection problem to telco
     1001: No Response. Cannot connect Telco API after 3 attempts
     1002: Connection Refused. Cannot access Telco API
+    1003: BlackListed
+
   tariff:
     250: play_250 # for 2.50 tariff (charging only)
     1000: play_1000 # for 10.00 tariff (charging only)

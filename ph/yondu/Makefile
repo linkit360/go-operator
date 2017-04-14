@@ -31,6 +31,9 @@ dnok:
 dn401:
 	curl -v "http://localhost:50306/api/dn?telco=globe&msisdn=9951502420&status=fail&code=401&rrn=1488219393&timestamp=1486527412"
 
+dn1003:
+	curl -v "http://localhost:50306/api/dn?telco=globe&msisdn=9951502420&status=fail&code=1003&rrn=1488219393&timestamp=1486527412"
+
 dnpostpaid:
 	curl -v "http://localhost:50306/api/dn?telco=globe&msisdn=9951502420&status=fail&code=414&rrn=1488219393&timestamp=1486527412"
 
