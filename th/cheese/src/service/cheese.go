@@ -140,7 +140,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 				r.Price = int(service.Price)
 				r.DelayHours = service.DelayHours
 				r.PaidHours = service.PaidHours
-				r.KeepDays = service.KeepDays
+				r.RetryDays = service.RetryDays
 				r.Periodic = false
 			}
 			campaign, err := inmem_client.GetCampaignByServiceId(serviceId)

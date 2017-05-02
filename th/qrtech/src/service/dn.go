@@ -90,7 +90,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 				r.Price = int(service.Price)
 				r.DelayHours = service.DelayHours
 				r.PaidHours = service.PaidHours
-				r.KeepDays = service.KeepDays
+				r.RetryDays = service.RetryDays
 				r.Periodic = true
 				r.PeriodicDays = r.PeriodicDays
 				r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom

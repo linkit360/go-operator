@@ -93,7 +93,7 @@ func (qr *QRTech) sendMT() {
 			now := time.Now().In(svc.API.location)
 			interval := 60*now.Hour() + now.Minute()
 			if serviceIns.PeriodicAllowedFrom < interval && serviceIns.PeriodicAllowedTo >= interval {
-				err := qr.mt(serviceIns.Id, serviceIns.SendContentTextTemplate)
+				err := qr.mt(serviceIns.Id, serviceIns.SMSOnContent)
 				if err != nil {
 					m.MTErrors.Set(1)
 					errorFlag = true
