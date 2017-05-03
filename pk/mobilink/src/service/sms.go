@@ -58,6 +58,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				ResponseBody:     tl.ResponseBody,
 				ResponseDecision: tl.ResponseDecision,
 				ResponseCode:     tl.ResponseCode,
+				Type:             tl.Type,
 			}); err != nil {
 				log.WithFields(log.Fields{
 					"event": e.EventName,
@@ -103,7 +104,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 }
 
 func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service.OperatorTransactionLog, err error) {
-
+	tl.Type = "sms"
 	m.SmsSuccess.Inc()
 
 	v := url.Values{}
@@ -117,7 +118,7 @@ func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service
 	endpoint := mb.conf.Content.Endpoint + "?" + v.Encode()
 	logCtx := log.WithFields(log.Fields{
 		"msisdn": msisdn,
-		"msg":    msg,
+		"text":   msg,
 		"tid":    tid,
 		"url":    endpoint,
 	})
@@ -140,7 +141,7 @@ func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service
 		m.SmsError.Inc()
 		m.Errors.Inc()
 
-		err = fmt.Errorf("client.Do: %s", err.Error())
+		err = fmt.Errorf("GET client.Do: %s", err.Error())
 		logCtx.Error(err.Error())
 		tl.Error = err.Error()
 		tl.ResponseDecision = "failed"
@@ -148,11 +149,11 @@ func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service
 	}
 	tl.ResponseCode = resp.StatusCode
 
-	if resp.StatusCode != 200 || resp.StatusCode != 201 {
+	if resp.StatusCode != 200 {
 		m.SmsError.Inc()
 		m.Errors.Inc()
 
-		err = fmt.Errorf("client.Do status code: %s", resp.Status)
+		err = fmt.Errorf("client.Do status code: %d", resp.StatusCode)
 		logCtx.Error(err.Error())
 		tl.Error = err.Error()
 		tl.ResponseDecision = "failed"

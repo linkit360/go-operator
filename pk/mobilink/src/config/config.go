@@ -49,7 +49,7 @@ type TransactionLogConfig struct {
 }
 
 type ContentConfig struct {
-	Endpoint string `default:"http://52.29.238.205:4444/cgi-bin/sendsms" yaml:"endpoint"`
+	Endpoint string `yaml:"endpoint"`
 	User     string `default:"user" yaml:"user"`
 	Password string `default:"password" yaml:"pass"`
 	From     string `default:"Slypee" yaml:"from"`

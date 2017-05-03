@@ -154,6 +154,7 @@ func (mb *mobilink) balanceCheck(tid, msisdn string) (bool, error) {
 			"postPaid":        postPaid,
 			"msisdn":          msisdn,
 			"token":           token,
+			"method":          "POST",
 			"endpoint":        mb.conf.MT.Url,
 			"headers":         fmt.Sprintf("%#v", req.Header),
 			"reqeustBody":     requestBody,

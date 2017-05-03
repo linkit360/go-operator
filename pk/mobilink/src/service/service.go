@@ -171,10 +171,12 @@ func (svc *Service) notifyTransactionLog(eventName string, tl transaction_log_se
 }
 
 func AddMobilinkTestHandlers(r *gin.Engine) {
-	rgMobilink := r.Group("/mobilink")
+	rgMobilink := r.Group("/mobilink", AccessHandler)
 	rgMobilink.POST("/paid", paidHandler)
+	rgMobilink.GET("/sms", paidHandler)
 	rgMobilink.POST("/failed", failedHandler)
 	rgMobilink.POST("/postpaid", postPaidHandler)
+
 }
 func paidHandler(c *gin.Context) {
 	c.Writer.WriteHeader(200)
@@ -187,4 +189,13 @@ func failedHandler(c *gin.Context) {
 func postPaidHandler(c *gin.Context) {
 	c.Writer.WriteHeader(200)
 	c.Writer.Write([]byte(`<value><i4>11</i4></value>`))
+}
+
+func AccessHandler(c *gin.Context) {
+	c.Next()
+	log.WithFields(log.Fields{
+		"method": c.Request.Method,
+		"path":   c.Request.URL.Path,
+		"req":    c.Request.URL.RawQuery,
+	}).Info("access")
 }
