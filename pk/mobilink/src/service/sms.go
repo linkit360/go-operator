@@ -38,6 +38,15 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 
 		switch {
 		case e.EventName == "send_sms":
+			if !svc.conf.mb.Content.Enabled {
+				m.Dropped.Inc()
+
+				log.WithFields(log.Fields{
+					"msg":         "dropped",
+					"sms_request": string(msg.Body),
+				}).Info("sms send sisabled")
+				goto ack
+			}
 			t := e.EventData
 			tl, smsErr := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
 			if smsErr != nil {

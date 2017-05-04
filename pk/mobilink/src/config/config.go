@@ -49,6 +49,7 @@ type TransactionLogConfig struct {
 }
 
 type ContentConfig struct {
+	Enabled  bool   `yaml:"enabled"`
 	Endpoint string `yaml:"endpoint"`
 	User     string `default:"user" yaml:"user"`
 	Password string `default:"password" yaml:"pass"`

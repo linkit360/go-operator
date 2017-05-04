@@ -31,6 +31,7 @@ type Service struct {
 }
 type ServiceConfig struct {
 	server   config.ServerConfig
+	mb       config.MobilinkConfig
 	queues   config.QueueConfig
 	consumer amqp.ConsumerConfig
 	notifier amqp.NotifierConfig
@@ -51,6 +52,7 @@ func InitService(
 	log.SetLevel(log.DebugLevel)
 	svc.conf = ServiceConfig{
 		server:   serverConfig,
+		mb:       mbConf,
 		queues:   qConfig,
 		consumer: consumerConfig,
 		notifier: notifierConfig,

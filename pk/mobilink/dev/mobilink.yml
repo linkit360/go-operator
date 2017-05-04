@@ -34,8 +34,8 @@ publisher:
     port: 5672
 
 mobilink:
-  rps: 15
   enabled: true
+  rps: 15
   log_transaction:
     queue: transaction_log
     response: /var/log/linkit/response_mobilink.log
@@ -43,6 +43,7 @@ mobilink:
   location: Asia/Karachi
 
   content:
+    enabled: false
     endpoint: http://localhost:50306/mobilink/sms
     # endpoint: http://52.29.238.205:4444/cgi-bin/sendsms
     user: username
