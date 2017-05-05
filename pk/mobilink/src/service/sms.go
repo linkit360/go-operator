@@ -47,6 +47,16 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				}).Info("sms send sisabled")
 				goto ack
 			}
+			if e.EventData.SMSText == "" {
+				m.Dropped.Inc()
+
+				log.WithFields(log.Fields{
+					"msg":         "dropped",
+					"sms_request": string(msg.Body),
+				}).Info("sms text is empty")
+				goto ack
+			}
+
 			t := e.EventData
 			tl, smsErr := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
 			if smsErr != nil {
@@ -158,24 +168,34 @@ func (mb *mobilink) SendSMS(tid, msisdn, msg string) (tl transaction_log_service
 	}
 	tl.ResponseCode = resp.StatusCode
 
-	if resp.StatusCode != 200 {
-		m.SmsError.Inc()
-		m.Errors.Inc()
+	if resp.StatusCode == 200 ||
+		resp.StatusCode == 201 ||
+		resp.StatusCode == 202 {
+		var bodyText []byte
+		bodyText, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logCtx.WithFields(log.Fields{
+				"err":            err.Error(),
+				"respStatusCode": resp.StatusCode,
+			}).Error("cannot read resp.Body for sms")
+		} else {
+			tl.ResponseBody = string(bodyText)
+		}
 
-		err = fmt.Errorf("client.Do status code: %d", resp.StatusCode)
-		logCtx.Error(err.Error())
-		tl.Error = err.Error()
-		tl.ResponseDecision = "failed"
+		logCtx.WithFields(log.Fields{
+			"body":           string(bodyText),
+			"respStatusCode": resp.StatusCode,
+		}).Debug("sms sent")
+
+		tl.ResponseDecision = "sent"
 		return
 	}
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	logCtx.WithFields(log.Fields{
-		"body":           string(bodyText),
-		"respStatusCode": resp.StatusCode,
-	}).Debug("sms sent")
+	m.SmsError.Inc()
+	m.Errors.Inc()
 
-	tl.ResponseBody = string(bodyText)
-	tl.ResponseDecision = "sent"
-
+	err = fmt.Errorf("client.Do status code: %d", resp.StatusCode)
+	logCtx.Error(err.Error())
+	tl.Error = err.Error()
+	tl.ResponseDecision = "failed"
 	return
 }
