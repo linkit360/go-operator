@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	SMPPConnected        prometheus.Gauge
 	SinceSuccessPaid     prometheus.Gauge
 	SmsSuccess           m.Gauge
 	SmsError             m.Gauge
@@ -30,7 +29,6 @@ func newDuration(name string) prometheus.Summary {
 
 func Init(appName string) {
 
-	SMPPConnected = m.PrometheusGauge("", "", "smpp_connected", "mobilink smppconnected")
 	SinceSuccessPaid = m.PrometheusGauge("", "", "since_success_paid", "mobilink since success paid")
 	SmsSuccess = m.NewGauge("", "", "sms_success", "sms check success")
 	SmsError = m.NewGauge("", "", "sms_errors", "sms check errors")

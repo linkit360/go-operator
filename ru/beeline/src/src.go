@@ -17,13 +17,6 @@ func RunServer() {
 
 	metrics.Init(appConfig.AppName)
 
-	service.InitService(
-		appConfig.Beeline,
-		appConfig.InMem,
-		appConfig.Consumer,
-		appConfig.Publisher,
-	)
-
 	nuCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nuCPU)
 	log.WithField("CPUCount", nuCPU)
@@ -36,6 +29,12 @@ func RunServer() {
 	r.Run(":" + appConfig.Server.Port)
 
 	log.WithField("port", appConfig.Server.Port).Info("beeline init")
+	service.InitService(
+		appConfig.Beeline,
+		appConfig.InMem,
+		appConfig.Consumer,
+		appConfig.Publisher,
+	)
 }
 
 func notFound(c *gin.Context) {
