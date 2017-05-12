@@ -44,7 +44,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				log.WithFields(log.Fields{
 					"msg":         "dropped",
 					"sms_request": string(msg.Body),
-				}).Info("sms send sisabled")
+				}).Info("sms send disabled")
 				goto ack
 			}
 			if e.EventData.SMSText == "" {
