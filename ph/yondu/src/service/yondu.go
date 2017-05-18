@@ -230,25 +230,11 @@ type DNParameters struct {
 }
 
 func (y *Yondu) DN(c *gin.Context) {
-
 	p := DNParameters{
 		Raw: c.Request.URL.Path + "/?" + c.Request.URL.RawQuery,
-		Tid: rec.GenerateTID(),
 	}
-	logCtx := log.WithFields(log.Fields{
-		"tid": p.Tid,
-	})
-	c.Set("tid", p.Tid)
-
 	var ok bool
-	p.Params.Telco, ok = c.GetQuery("telco")
-	if !ok {
-		m.Errors.Inc()
-		m.DNErrors.Inc()
 
-		absentParameter(p.Tid, "telco", c)
-		return
-	}
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
 	if !ok {
 		m.Errors.Inc()
@@ -257,6 +243,21 @@ func (y *Yondu) DN(c *gin.Context) {
 		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
+	p.Tid = rec.GenerateTID(p.Params.Msisdn)
+	logCtx := log.WithFields(log.Fields{
+		"tid": p.Tid,
+	})
+	c.Set("tid", p.Tid)
+
+	p.Params.Telco, ok = c.GetQuery("telco")
+	if !ok {
+		m.Errors.Inc()
+		m.DNErrors.Inc()
+
+		absentParameter(p.Tid, "telco", c)
+		return
+	}
+
 	p.Params.RRN, ok = c.GetQuery("rrn")
 	if !ok {
 		m.Errors.Inc()
@@ -310,6 +311,7 @@ func (y *Yondu) DN(c *gin.Context) {
 			"dn":     dnMessage,
 		}).Info("sent")
 	}
+
 }
 
 //MO
@@ -329,13 +331,8 @@ type MOParameters struct {
 func (y *Yondu) MO(c *gin.Context) {
 	p := MOParameters{
 		Raw:        c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
-		Tid:        rec.GenerateTID(),
 		ReceivedAt: time.Now().UTC(),
 	}
-	logCtx := log.WithFields(log.Fields{
-		"tid": p.Tid,
-	})
-	c.Set("tid", p.Tid)
 
 	var ok bool
 	p.Params.Msisdn, ok = c.GetQuery("msisdn")
@@ -346,6 +343,12 @@ func (y *Yondu) MO(c *gin.Context) {
 		absentParameter(p.Tid, "msisdn", c)
 		return
 	}
+	p.Tid = rec.GenerateTID(p.Params.Msisdn)
+	logCtx := log.WithFields(log.Fields{
+		"tid": p.Tid,
+	})
+	c.Set("tid", p.Tid)
+
 	p.Params.Telco, ok = c.GetQuery("telco")
 	if !ok {
 		m.Errors.Inc()

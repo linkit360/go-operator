@@ -23,9 +23,20 @@ func AddDNHandler(r *gin.Engine) {
 func (qr *QRTech) dn(c *gin.Context) {
 	var err error
 	r := rec.Record{
-		Tid:         rec.GenerateTID(),
 		CountryCode: qr.conf.CountryCode,
 	}
+
+	var ok bool
+	r.Msisdn, ok = c.GetPostForm("msisdn")
+	if !ok {
+		m.AbsentParameter.Inc()
+		m.Errors.Inc()
+		log.WithFields(log.Fields{
+			"req": c.Request.URL.String(),
+		}).Error("cann't find msisdn")
+		r.OperatorErr = r.OperatorErr + " no msn"
+	}
+	r.Tid = rec.GenerateTID(r.Msisdn)
 	logCtx := log.WithField("tid", r.Tid)
 
 	operatorCode, ok := c.GetPostForm("operator")
@@ -60,7 +71,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		}).Error("cannot parse operator code")
 	}
 
-	shortCode, ok := c.GetPostForm("shortcode")
+	r.ServiceCode, ok = c.GetPostForm("shortcode")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -68,50 +79,39 @@ func (qr *QRTech) dn(c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Error("cann't find shortcode")
 		r.OperatorErr = r.OperatorErr + " ;no shortcode;"
 	}
-	if len(shortCode) > 0 {
-		serviceId, err := strconv.ParseInt(shortCode, 10, 64)
+	if len(r.ServiceCode) > 0 {
+		service, err := inmem_client.GetServiceByCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
-			m.WrongServiceKey.Inc()
-			logCtx.WithFields(log.Fields{
-				"serviceKey": shortCode,
-			}).Error("wrong service key")
-		} else {
-			r.ServiceId = serviceId
-			service, err := inmem_client.GetServiceById(serviceId)
-			if err != nil {
-				m.Errors.Inc()
 
-				logCtx.WithFields(log.Fields{
-					"serviceKey": shortCode,
-					"service_id": serviceId,
-				}).Error("cannot get service by id")
-			} else {
-				r.Price = int(service.Price)
-				r.DelayHours = service.DelayHours
-				r.PaidHours = service.PaidHours
-				r.RetryDays = service.RetryDays
-				r.Periodic = true
-				r.PeriodicDays = r.PeriodicDays
-				r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom
-				r.PeriodicAllowedToHours = service.PeriodicAllowedTo
-			}
-			campaign, err := inmem_client.GetCampaignByServiceId(serviceId)
-			if err != nil {
-				m.Errors.Inc()
-				logCtx.WithFields(log.Fields{
-					"serviceKey": shortCode,
-					"service_id": serviceId,
-				}).Error("cannot get campaign by service id")
-			} else {
-				r.CampaignId = campaign.Id
-			}
+			logCtx.WithFields(log.Fields{
+				"serviceKey": r.ServiceCode,
+			}).Error("cannot get service by code")
+		} else {
+			r.Price = int(service.Price)
+			r.DelayHours = service.DelayHours
+			r.PaidHours = service.PaidHours
+			r.RetryDays = service.RetryDays
+			r.Periodic = true
+			r.PeriodicDays = r.PeriodicDays
+			r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom
+			r.PeriodicAllowedToHours = service.PeriodicAllowedTo
 		}
+		campaign, err := inmem_client.GetCampaignByServiceCode(r.ServiceCode)
+		if err != nil {
+			m.Errors.Inc()
+			logCtx.WithFields(log.Fields{
+				"serviceKey": r.ServiceCode,
+			}).Error("cannot get campaign by service code")
+		} else {
+			r.CampaignCode = campaign.Code
+		}
+
 	} else {
 		m.Errors.Inc()
 		m.WrongServiceKey.Inc()
 		logCtx.WithFields(log.Fields{
-			"serviceKey": shortCode,
+			"serviceKey": r.ServiceCode,
 		}).Error("wrong service key")
 	}
 	r.OperatorToken, ok = c.GetPostForm("dnid")
@@ -169,13 +169,6 @@ func (qr *QRTech) dn(c *gin.Context) {
 		}
 	}
 
-	r.Msisdn, ok = c.GetPostForm("msisdn")
-	if !ok {
-		m.AbsentParameter.Inc()
-		m.Errors.Inc()
-		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
-		r.OperatorErr = r.OperatorErr + " no msn"
-	}
 	bcdate, ok := c.GetPostForm("bcdate")
 	if !ok {
 		logCtx.WithFields(log.Fields{}).Warn("cann't find bcdate")
@@ -205,7 +198,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 	f := log.Fields{
 		"dnid":         r.OperatorToken,
 		"msisdn":       r.Msisdn,
-		"shortCode":    shortCode,
+		"shortCode":    r.ServiceCode,
 		"operatorCode": operatorCode,
 		"bcdate":       bcdate,
 		"dnerrorcode":  dnerrorcode,
@@ -224,8 +217,8 @@ func (qr *QRTech) dn(c *gin.Context) {
 		CountryCode:      r.CountryCode,
 		Error:            r.OperatorErr,
 		Price:            r.Price,
-		ServiceId:        r.ServiceId,
-		CampaignId:       r.CampaignId,
+		ServiceCode:      r.ServiceCode,
+		CampaignCode:     r.CampaignCode,
 		RequestBody:      c.Request.URL.Path + "/" + string(fieldsBody),
 		ResponseBody:     "",
 		ResponseDecision: "",

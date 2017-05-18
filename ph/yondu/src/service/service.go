@@ -139,10 +139,9 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		CountryCode:      t.CountryCode,
 		Error:            yr.ResponseError,
 		Price:            t.Price,
-		Notice:           t.Notice,
-		ServiceId:        t.ServiceId,
+		ServiceCode:      t.ServiceCode,
 		SubscriptionId:   t.SubscriptionId,
-		CampaignId:       t.CampaignId,
+		CampaignCode:     t.CampaignCode,
 		RequestBody:      yr.RequestUrl,
 		ResponseBody:     fmt.Sprintf("%v", yr.ResponseRawBody),
 		ResponseDecision: yr.ResponseMessage,
@@ -151,9 +150,9 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		Type:             eventName,
 	}
 	if t.Price > 0 {
-		t.Notice = "charge req"
+		tl.Notice = "charge req"
 	} else {
-		t.Notice = "content"
+		tl.Notice = "content"
 	}
 	tl.SentAt = time.Now().UTC()
 	event := amqp.EventNotify{

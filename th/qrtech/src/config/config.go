@@ -75,7 +75,7 @@ type QRTechQueuesConfig struct {
 }
 type InternalsConfig struct {
 	sync.RWMutex
-	MTLastAt map[int64]time.Time `json:"mt_last_at"`
+	MTLastAt map[string]time.Time `json:"mt_last_at"`
 }
 
 func (ic *InternalsConfig) Load(path string) (err error) {

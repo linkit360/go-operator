@@ -28,23 +28,23 @@ func TestResolveRec(t *testing.T) {
 	s, err := resolveRec(dstAddr, r)
 	assert.NoError(t, err, "resolveRec")
 	assert.Equal(t, int64(777), s.Id, "service id")
-	assert.Equal(t, int64(290), r.CampaignId, "campaign id")
+	assert.Equal(t, int64(290), r.CampaignCode, "campaign id")
 
 	dstAddr = "8580"
 	s, err = resolveRec(dstAddr, r)
 	assert.NoError(t, err, "resolveRec")
 	assert.Equal(t, int64(777), s.Id, "service id")
-	assert.Equal(t, int64(290), r.CampaignId, "campaign id")
+	assert.Equal(t, int64(290), r.CampaignCode, "campaign id")
 
 	dstAddr = "858001"
 	s, err = resolveRec(dstAddr, r)
 	assert.NoError(t, err, "resolveRec")
 	assert.Equal(t, int64(777), s.Id, "service id")
-	assert.Equal(t, int64(290), r.CampaignId, "campaign id")
+	assert.Equal(t, int64(290), r.CampaignCode, "campaign id")
 
 	dstAddr = "85801\x00"
 	s, err = resolveRec(dstAddr, r)
 	assert.NoError(t, err, "resolveRec")
 	assert.Equal(t, int64(777), s.Id, "service id")
-	assert.Equal(t, int64(290), r.CampaignId, "campaign id")
+	assert.Equal(t, int64(290), r.CampaignCode, "campaign id")
 }

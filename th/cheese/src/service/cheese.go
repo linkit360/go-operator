@@ -92,9 +92,21 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		m.UnknownOperator.Inc()
 	}
 	r := rec.Record{
-		Tid:         rec.GenerateTID(),
 		CountryCode: cheese.conf.CountryCode,
 	}
+
+	var ok bool
+	r.Msisdn, ok = c.GetQuery("msn")
+	if !ok {
+		m.AbsentParameter.Inc()
+		m.Errors.Inc()
+		log.WithFields(log.Fields{
+			"req": c.Request.RequestURI,
+		}).Error("cann't find msisdn")
+		r.OperatorErr = r.OperatorErr + " no msn"
+	}
+	r.Tid = rec.GenerateTID(r.Msisdn)
+
 	logCtx := log.WithField("tid", r.Tid)
 	logCtx.WithField("url", c.Request.URL.Path+"/"+c.Request.URL.RawQuery).Info("access")
 
@@ -110,7 +122,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		}).Error("cannot parse operator code")
 	}
 
-	serviceKey, ok := c.GetQuery("svk")
+	r.ServiceCode, ok = c.GetQuery("svk")
 	if !ok {
 		m.AbsentParameter.Inc()
 		m.Errors.Inc()
@@ -118,47 +130,35 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		logCtx.WithFields(log.Fields{}).Error("cann't find service key")
 		r.OperatorErr = r.OperatorErr + " no service key"
 	}
-	if len(serviceKey) > 0 {
-		serviceId, err := strconv.ParseInt(serviceKey, 10, 64)
+	if len(r.ServiceCode) > 0 {
+		service, err := inmem_client.GetServiceByCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
-			m.WrongServiceKey.Inc()
-			logCtx.WithFields(log.Fields{
-				"serviceKey": serviceKey,
-			}).Error("wrong service key")
-		} else {
-			r.ServiceId = serviceId
-			service, err := inmem_client.GetServiceById(serviceId)
-			if err != nil {
-				m.Errors.Inc()
 
-				logCtx.WithFields(log.Fields{
-					"serviceKey": serviceKey,
-					"service_id": serviceId,
-				}).Error("cannot get service by id")
-			} else {
-				r.Price = int(service.Price)
-				r.DelayHours = service.DelayHours
-				r.PaidHours = service.PaidHours
-				r.RetryDays = service.RetryDays
-				r.Periodic = false
-			}
-			campaign, err := inmem_client.GetCampaignByServiceId(serviceId)
-			if err != nil {
-				m.Errors.Inc()
-				logCtx.WithFields(log.Fields{
-					"serviceKey": serviceKey,
-					"service_id": serviceId,
-				}).Error("cannot get campaign by service id")
-			} else {
-				r.CampaignId = campaign.Id
-			}
+			logCtx.WithFields(log.Fields{
+				"serviceKey": r.ServiceCode,
+			}).Error("cannot get service by id")
+		} else {
+			r.Price = 100 * int(service.Price)
+			r.DelayHours = service.DelayHours
+			r.PaidHours = service.PaidHours
+			r.RetryDays = service.RetryDays
+			r.Periodic = false
+		}
+		campaign, err := inmem_client.GetCampaignByServiceCode(r.ServiceCode)
+		if err != nil {
+			m.Errors.Inc()
+			logCtx.WithFields(log.Fields{
+				"serviceKey": r.ServiceCode,
+			}).Error("cannot get campaign by service id")
+		} else {
+			r.CampaignCode = campaign.Code
 		}
 	} else {
 		m.Errors.Inc()
 		m.WrongServiceKey.Inc()
 		logCtx.WithFields(log.Fields{
-			"serviceKey": serviceKey,
+			"serviceKey": r.ServiceCode,
 		}).Error("wrong service key")
 	}
 	r.OperatorToken, ok = c.GetQuery("ref")
@@ -167,13 +167,6 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find operator token")
 		r.OperatorErr = r.OperatorErr + " no ref"
-	}
-	r.Msisdn, ok = c.GetQuery("msn")
-	if !ok {
-		m.AbsentParameter.Inc()
-		m.Errors.Inc()
-		logCtx.WithFields(log.Fields{}).Error("cann't find msisdn")
-		r.OperatorErr = r.OperatorErr + " no msn"
 	}
 	_, ok = c.GetQuery("chn")
 	if !ok {
@@ -219,8 +212,8 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		CountryCode:      r.CountryCode,
 		Error:            r.OperatorErr,
 		Price:            r.Price,
-		ServiceId:        r.ServiceId,
-		CampaignId:       r.CampaignId,
+		ServiceCode:      r.ServiceCode,
+		CampaignCode:     r.CampaignCode,
 		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 		ResponseBody:     "",
 		ResponseDecision: "",

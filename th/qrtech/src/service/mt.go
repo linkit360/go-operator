@@ -68,47 +68,47 @@ func (qr *QRTech) sendMT() {
 		errorFlag := false
 		for _, serviceIns := range services {
 			log.WithFields(log.Fields{
-				"service": serviceIns.Id,
+				"service": serviceIns.Code,
 			}).Debug("process service..")
 
-			lastAt, ok := svc.internals.MTLastAt[serviceIns.Id]
+			lastAt, ok := svc.internals.MTLastAt[serviceIns.Code]
 			if ok {
 				if time.Since(lastAt.In(svc.API.location)).Hours() < 24 {
 					log.WithFields(log.Fields{
-						"service": serviceIns.Id,
+						"service": serviceIns.Code,
 						"last":    lastAt,
 						"hours":   fmt.Sprintf("%#v", time.Since(lastAt).Hours()),
 					}).Debug("skip")
 					continue
 				}
 				log.WithFields(log.Fields{
-					"service": serviceIns.Id,
+					"service": serviceIns.Code,
 				}).Debug("ok with last time")
 			} else {
 				log.WithFields(log.Fields{
-					"service": serviceIns.Id,
+					"service": serviceIns.Code,
 				}).Debug("was not called")
 			}
 
 			now := time.Now().In(svc.API.location)
 			interval := 60*now.Hour() + now.Minute()
 			if serviceIns.PeriodicAllowedFrom < interval && serviceIns.PeriodicAllowedTo >= interval {
-				err := qr.mt(serviceIns.Id, serviceIns.SMSOnContent)
+				err := qr.mt(serviceIns.Code, serviceIns.SMSOnContent)
 				if err != nil {
 					m.MTErrors.Set(1)
 					errorFlag = true
 				} else {
 					log.WithFields(log.Fields{
-						"service": serviceIns.Id,
+						"service": serviceIns.Code,
 					}).Debug("set now")
 					if svc.internals.MTLastAt == nil {
-						svc.internals.MTLastAt = make(map[int64]time.Time)
+						svc.internals.MTLastAt = make(map[string]time.Time)
 					}
-					svc.internals.MTLastAt[serviceIns.Id] = now
+					svc.internals.MTLastAt[serviceIns.Code] = now
 				}
 			} else {
 				log.WithFields(log.Fields{
-					"service":  serviceIns.Id,
+					"service":  serviceIns.Code,
 					"interval": interval,
 					"from":     serviceIns.PeriodicAllowedFrom,
 					"to":       serviceIns.PeriodicAllowedTo,
@@ -129,13 +129,13 @@ func (qr *QRTech) sendMT() {
 	}
 }
 
-func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
+func (qr *QRTech) mt(serviceCode, smsText string) (err error) {
 	v := url.Values{}
 	var resp *http.Response
 	var qrTechResponse []byte
 
 	v.Add("username", qr.conf.MT.UserName)
-	v.Add("serviceid", strconv.FormatInt(serviceId, 10))
+	v.Add("serviceid", serviceCode)
 	v.Add("broadcastdate", time.Now().Format("20060102150405")[:8])
 	v.Add("ctype", "1") // 1=text/ 2=unicode type
 	time2Add2Text := time.Now().Format("02-01-2006")
@@ -209,8 +209,8 @@ func (qr *QRTech) mt(serviceId int64, smsText string) (err error) {
 		Tid:              operatorToken,
 		OperatorToken:    operatorToken,
 		Error:            operatorErr,
-		ServiceId:        serviceId,
-		CampaignId:       serviceId,
+		ServiceCode:      serviceCode,
+		CampaignCode:     serviceCode,
 		RequestBody:      qr.conf.MT.APIUrl + "?" + v.Encode(),
 		ResponseBody:     string(qrTechResponse),
 		ResponseDecision: operatorToken,

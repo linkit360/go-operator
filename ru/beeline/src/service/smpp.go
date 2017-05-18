@@ -36,7 +36,7 @@ func pduHandler(p pdu.Body) {
 	tlv := p.TLVFields()
 
 	i := Incoming{
-		Tid:          rec.GenerateTID(),
+		Tid:          rec.GenerateTID(field(f, pdufield.SourceAddr)),
 		Seq:          fmt.Sprintf("%v", h.Seq),
 		SentAt:       time.Now().UTC(),
 		SourcePort:   tlvfieldi(tlv, pdufield.SourcePort),
