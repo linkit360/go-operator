@@ -110,7 +110,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service id")
 		} else {
-			r.CampaignCode = campaign.Code
+			r.CampaignCode = campaign.Properties.Code
 		}
 	} else {
 		m.Errors.Inc()

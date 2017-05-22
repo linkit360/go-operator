@@ -152,7 +152,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service id")
 		} else {
-			r.CampaignCode = campaign.Code
+			r.CampaignCode = campaign.Properties.Code
 		}
 	} else {
 		m.Errors.Inc()
@@ -271,8 +271,8 @@ func AccessHandler(c *gin.Context) {
 	path := c.Request.URL.Path
 	if c.Request.URL.RawQuery != "" {
 		path = path + "?" + c.Request.URL.RawQuery
-
 	}
+
 	fields := log.Fields{
 		"method": c.Request.Method,
 		"url":    path,
