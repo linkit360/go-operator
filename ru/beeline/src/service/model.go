@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
 	"github.com/linkit360/go-utils/amqp"
 	logger "github.com/linkit360/go-utils/log"

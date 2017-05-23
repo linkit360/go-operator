@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_client "github.com/linkit360/go-mid/rpcclient"
 	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
 	rec "github.com/linkit360/go-utils/rec"

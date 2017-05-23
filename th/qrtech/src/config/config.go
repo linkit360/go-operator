@@ -14,7 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/db"
 )
@@ -100,7 +100,11 @@ func (ic *InternalsConfig) Load(path string) (err error) {
 		return
 	}
 	if err = json.Unmarshal(bufferBytes.Bytes(), ic); err != nil {
-		log.WithField("error", err.Error()).Error("cannot unmarshal")
+		log.WithFields(log.Fields{
+			"path":  path,
+			"bytes": string(bufferBytes.Bytes()),
+			"error": err.Error(),
+		}).Error("cannot unmarshal")
 		return
 	}
 	log.Debug("read")

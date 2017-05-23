@@ -7,7 +7,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_client "github.com/linkit360/go-mid/rpcclient"
 	//"github.com/linkit360/go-operator/ru/beeline/src/config"
 	rec "github.com/linkit360/go-utils/rec"
 )
