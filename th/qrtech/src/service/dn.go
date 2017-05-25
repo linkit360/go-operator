@@ -29,7 +29,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 	var ok bool
 	r.Msisdn, ok = c.GetPostForm("msisdn")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 		log.WithFields(log.Fields{
 			"req": c.Request.URL.String(),
@@ -41,7 +41,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 
 	operatorCode, ok := c.GetPostForm("operator")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find operator")
 		r.OperatorErr = r.OperatorErr + " no operator"
@@ -49,20 +49,20 @@ func (qr *QRTech) dn(c *gin.Context) {
 	switch operatorCode {
 	case "1":
 		operatorCode = qr.conf.MCC + qr.conf.AisMNC
-		m.AisSuccess.Inc()
+		m.DN.AisSuccess.Inc()
 	case "2":
 		operatorCode = qr.conf.MCC + qr.conf.DtacMNC
-		m.DtacSuccess.Inc()
+		m.DN.DtacSuccess.Inc()
 	case "3":
 		operatorCode = qr.conf.MCC + qr.conf.TruehMNC
-		m.TruehSuccess.Inc()
+		m.DN.TruehSuccess.Inc()
 	default:
 		m.Errors.Inc()
-		m.UnknownOperator.Inc()
+		m.DN.UnknownOperator.Inc()
 	}
 	r.OperatorCode, err = strconv.ParseInt(operatorCode, 10, 64)
 	if err != nil {
-		m.UnknownOperator.Inc()
+		m.DN.UnknownOperator.Inc()
 		m.Errors.Inc()
 
 		logCtx.WithFields(log.Fields{
@@ -73,7 +73,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 
 	r.ServiceCode, ok = c.GetPostForm("shortcode")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 
 		logCtx.WithFields(log.Fields{}).Error("cann't find shortcode")
@@ -104,19 +104,19 @@ func (qr *QRTech) dn(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service code")
 		} else {
-			r.CampaignCode = campaign.Properties.Code
+			r.CampaignCode = campaign.Code
 		}
 
 	} else {
 		m.Errors.Inc()
-		m.WrongServiceKey.Inc()
+		m.DN.WrongServiceKey.Inc()
 		logCtx.WithFields(log.Fields{
 			"serviceKey": r.ServiceCode,
 		}).Error("wrong service key")
 	}
 	r.OperatorToken, ok = c.GetPostForm("dnid")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find dnid")
 		r.OperatorErr = r.OperatorErr + " no dnid"
@@ -124,7 +124,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 	var notice string
 	dnerrorcode, ok := c.GetPostForm("dnerrorcode")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find dnerrorcode")
 		r.OperatorErr = r.OperatorErr + " no dnerrorcode"
@@ -189,7 +189,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 
 	keyWord, ok := c.GetPostForm("keyword")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.DN.AbsentParameter.Inc()
 		m.Errors.Inc()
 
 		logCtx.WithFields(log.Fields{}).Warn("cann't find keyword")

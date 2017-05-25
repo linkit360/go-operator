@@ -152,7 +152,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service id")
 		} else {
-			r.CampaignCode = campaign.Properties.Code
+			r.CampaignCode = campaign.Code
 		}
 	} else {
 		m.Errors.Inc()

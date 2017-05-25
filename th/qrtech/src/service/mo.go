@@ -34,7 +34,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 	}
 	r.Msisdn, ok = c.GetPostForm("msisdn")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 		log.WithFields(log.Fields{
 			"req": c.Request.URL.String(),
@@ -47,7 +47,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 
 	operatorCode, ok := c.GetPostForm("operator")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find operator")
 		r.OperatorErr = r.OperatorErr + " no operator"
@@ -55,20 +55,20 @@ func (qr *QRTech) mo(c *gin.Context) {
 	switch operatorCode {
 	case "1":
 		operatorCode = qr.conf.MCC + qr.conf.AisMNC
-		m.AisSuccess.Inc()
+		m.MO.AisSuccess.Inc()
 	case "2":
 		operatorCode = qr.conf.MCC + qr.conf.DtacMNC
-		m.DtacSuccess.Inc()
+		m.MO.DtacSuccess.Inc()
 	case "3":
 		operatorCode = qr.conf.MCC + qr.conf.TruehMNC
-		m.TruehSuccess.Inc()
+		m.MO.TruehSuccess.Inc()
 	default:
 		m.Errors.Inc()
-		m.UnknownOperator.Inc()
+		m.MO.UnknownOperator.Inc()
 	}
 	r.OperatorCode, err = strconv.ParseInt(operatorCode, 10, 64)
 	if err != nil {
-		m.UnknownOperator.Inc()
+		m.MO.UnknownOperator.Inc()
 		m.Errors.Inc()
 
 		logCtx.WithFields(log.Fields{
@@ -79,7 +79,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 
 	r.ServiceCode, ok = c.GetPostForm("shortcode")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 
 		logCtx.WithFields(log.Fields{}).Error("cann't find shortcode")
@@ -110,18 +110,18 @@ func (qr *QRTech) mo(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service id")
 		} else {
-			r.CampaignCode = campaign.Properties.Code
+			r.CampaignCode = campaign.Code
 		}
 	} else {
 		m.Errors.Inc()
-		m.WrongServiceKey.Inc()
+		m.MO.WrongServiceKey.Inc()
 		logCtx.WithFields(log.Fields{
 			"serviceKey": r.ServiceCode,
 		}).Error("wrong service key")
 	}
 	r.OperatorToken, ok = c.GetPostForm("msgid")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Error("cann't find msgid")
 		r.OperatorErr = r.OperatorErr + " no msgid"
@@ -129,14 +129,14 @@ func (qr *QRTech) mo(c *gin.Context) {
 
 	notice, ok := c.GetPostForm("message")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find message")
 		r.OperatorErr = r.OperatorErr + " no message"
 	}
 	keyWord, ok := c.GetPostForm("keyword")
 	if !ok {
-		m.AbsentParameter.Inc()
+		m.MO.AbsentParameter.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{}).Warn("cann't find keyword")
 		r.OperatorErr = r.OperatorErr + " no keyword"
@@ -153,14 +153,14 @@ func (qr *QRTech) mo(c *gin.Context) {
 
 	moToken, ok := c.GetPostForm("motoken")
 	if !ok {
-		m.UnAuthorized.Inc()
+		m.MO.UnAuthorized.Inc()
 		m.Errors.Inc()
 		log.WithFields(log.Fields{"error": "unauthorized"}).Error("cann't find motoken")
 		c.JSON(403, struct{}{})
 		return
 	}
 	if moToken != qr.conf.MoToken {
-		m.UnAuthorized.Inc()
+		m.MO.UnAuthorized.Inc()
 		m.Errors.Inc()
 		logCtx.WithFields(log.Fields{"error": "unauthorized"}).Error("motoken differs")
 		c.JSON(403, struct{}{})
@@ -191,8 +191,8 @@ func (qr *QRTech) mo(c *gin.Context) {
 		Type:             "mo",
 	}
 
-	if strings.Contains(notice, "STOP") {
-		m.Unsibscribe.Inc()
+	if strings.Contains(strings.ToLower(notice), "STOP") {
+		m.MO.Unsibscribe.Inc()
 		if err := svc.publishUnsubscrube(qr.conf.Queue.Unsubscribe, r); err != nil {
 			m.Errors.Inc()
 

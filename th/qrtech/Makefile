@@ -13,6 +13,9 @@ run:
 rm:
 	rm bin/qrtech-linux-amd64; rm ~/linkit/qrtech-linux-amd64
 
+cp:
+	cp bin/qrtech-linux-amd64 ~/linkit; cp dev/qrtech.yml  ~/linkit/;
+
 build:
 	export GOOS=linux; export GOARCH=amd64; \
 	sed -i "s/%VERSION%/$(VERSION)/g" /home/centos/vostrok/utils/metrics/metrics.go; \

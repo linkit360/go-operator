@@ -9,34 +9,33 @@ import (
 )
 
 var (
-	Success          m.Gauge
-	Errors           m.Gauge
-	AbsentParameter  m.Gauge
-	PageNotFound     m.Gauge
-	Dropped          m.Gauge
-	Empty            m.Gauge
-	NotifyErrors     m.Gauge
-	MOParseTimeError m.Gauge
-	WrongServiceKey  m.Gauge
-	UnknownOperator  m.Gauge
-	UnAuthorized     m.Gauge
-	Unsibscribe      m.Gauge
-
-	AisSuccess m.Gauge
-	AisErrors  m.Gauge
-
-	DtacSuccess m.Gauge
-	DtacErrors  m.Gauge
-
-	TruehSuccess m.Gauge
-	TruehErrors  m.Gauge
-
-	MTErrors prometheus.Gauge
-
-	DN *DNMetrics
+	Success      m.Gauge
+	Errors       m.Gauge
+	PageNotFound m.Gauge
+	NotifyErrors m.Gauge
+	MTErrors     prometheus.Gauge
+	MO           *MOMetrics
+	DN           *DNMetrics
 )
 
+type MOMetrics struct {
+	AisSuccess      m.Gauge
+	DtacSuccess     m.Gauge
+	TruehSuccess    m.Gauge
+	Unsibscribe     m.Gauge
+	UnAuthorized    m.Gauge
+	UnknownOperator m.Gauge
+	WrongServiceKey m.Gauge
+	AbsentParameter m.Gauge
+}
+
 type DNMetrics struct {
+	AisSuccess                     m.Gauge
+	DtacSuccess                    m.Gauge
+	TruehSuccess                   m.Gauge
+	UnknownOperator                m.Gauge
+	WrongServiceKey                m.Gauge
+	AbsentParameter                m.Gauge
 	MTSuccessfull200               m.Gauge
 	MTSentToQueueSuccessfully100   m.Gauge
 	MTRejected500                  m.Gauge
@@ -57,28 +56,28 @@ func Init(appName string) {
 
 	Success = m.NewGauge("", "", "success", "success")
 	Errors = m.NewGauge("", "", "errors", "errors")
-	AbsentParameter = m.NewGauge("", appName, "adsent_parameter", "wrong parameters")
 	PageNotFound = m.NewGauge("", appName, "404_page_not_found", "404 page not found")
-	Dropped = m.NewGauge("", appName, "dropped", "queue dropped")
-	Empty = m.NewGauge("", appName, "empty", "queue empty")
 	NotifyErrors = m.NewGauge("", appName, "notify_errors", "notify errors")
-	MOParseTimeError = m.NewGauge("", appName, "mo_parse_time_errors", "parse time errors")
-	WrongServiceKey = m.NewGauge("", appName, "mo_wrong_service_key", "mo wrong service key")
-	UnknownOperator = m.NewGauge("", appName, "operator_unknown", "unknown operator")
-	UnAuthorized = m.NewGauge("", appName, "unauthorized", "unauthorized")
-	Unsibscribe = m.NewGauge("", appName, "unsubscribe", "unsubscribe")
-
-	AisSuccess = m.NewGauge("", appName, "ais_success", "ais req success")
-	AisErrors = m.NewGauge("", appName, "ais_errors", "ais req errors")
-
-	DtacSuccess = m.NewGauge("", appName, "dtac_success", "dtac success")
-	DtacErrors = m.NewGauge("", appName, "dtac_errors", "dtac errors")
-
-	TruehSuccess = m.NewGauge("", appName, "trueh_success", "trueh success")
-	TruehErrors = m.NewGauge("", appName, "trueh_errors", "trueh errors")
-
 	MTErrors = m.PrometheusGauge("", appName, "mt_errors", "mt errors")
+
+	MO = &MOMetrics{
+		AisSuccess:      m.NewGauge(appName, "mo", "ais_success", "ais req success"),
+		DtacSuccess:     m.NewGauge(appName, "mo", "dtac_success", "dtac success"),
+		TruehSuccess:    m.NewGauge(appName, "mo", "trueh_success", "trueh success"),
+		Unsibscribe:     m.NewGauge(appName, "mo", "unsubscribe", "unsubscribe"),
+		UnAuthorized:    m.NewGauge(appName, "mo", "unauthorized", "unauthorized"),
+		UnknownOperator: m.NewGauge(appName, "mo", "operator_unknown", "unknown operator"),
+		WrongServiceKey: m.NewGauge(appName, "mo", "wrong_service_key", "mo wrong service key"),
+		AbsentParameter: m.NewGauge(appName, "mo", "adsent_parameter", "wrong parameters"),
+	}
+
 	DN = &DNMetrics{
+		AisSuccess:                     m.NewGauge(appName, "dn", "ais_success", "ais req success"),
+		DtacSuccess:                    m.NewGauge(appName, "dn", "dtac_success", "dtac success"),
+		TruehSuccess:                   m.NewGauge(appName, "dn", "trueh_success", "trueh success"),
+		UnknownOperator:                m.NewGauge(appName, "dn", "operator_unknown", "dn unknown operator"),
+		WrongServiceKey:                m.NewGauge(appName, "dn", "wrong_service_key", "dn wrong service key"),
+		AbsentParameter:                m.NewGauge(appName, "dn", "adsent_parameter", "dn wrong parameters"),
 		MTSuccessfull200:               m.NewGauge(appName, "dn", "mt_successful", "dn mt_successful"),
 		MTSentToQueueSuccessfully100:   m.NewGauge(appName, "dn", "mt_sent_to_queue_successfully", "mt sent to queue successfully"),
 		MTRejected500:                  m.NewGauge(appName, "dn", "mt_rejected", "dn mt rejected"),
@@ -98,26 +97,24 @@ func Init(appName string) {
 		for range time.Tick(time.Minute) {
 			Success.Update()
 			Errors.Update()
-			AbsentParameter.Update()
 			PageNotFound.Update()
-			Dropped.Update()
-			Empty.Update()
 			NotifyErrors.Update()
-			MOParseTimeError.Update()
-			WrongServiceKey.Update()
-			UnknownOperator.Update()
-			UnAuthorized.Update()
-			Unsibscribe.Update()
 
-			AisSuccess.Update()
-			AisErrors.Update()
+			MO.AisSuccess.Update()
+			MO.DtacSuccess.Update()
+			MO.TruehSuccess.Update()
+			MO.Unsibscribe.Update()
+			MO.UnAuthorized.Update()
+			MO.UnknownOperator.Update()
+			MO.WrongServiceKey.Update()
+			MO.AbsentParameter.Update()
 
-			DtacSuccess.Update()
-			DtacErrors.Update()
-
-			TruehSuccess.Update()
-			TruehErrors.Update()
-
+			DN.AisSuccess.Update()
+			DN.DtacSuccess.Update()
+			DN.TruehSuccess.Update()
+			DN.UnknownOperator.Update()
+			DN.WrongServiceKey.Update()
+			DN.AbsentParameter.Update()
 			DN.MTSuccessfull200.Update()
 			DN.MTSentToQueueSuccessfully100.Update()
 			DN.MTRejected500.Update()
