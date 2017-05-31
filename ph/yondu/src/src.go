@@ -22,7 +22,7 @@ func RunServer() {
 		appConfig.Yondu,
 		appConfig.Consumer,
 		appConfig.Publisher,
-		appConfig.InMem,
+		appConfig.Mid,
 	)
 
 	nuCPU := runtime.NumCPU()

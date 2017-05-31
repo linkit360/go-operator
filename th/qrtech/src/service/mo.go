@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
 	rec "github.com/linkit360/go-utils/rec"
@@ -86,7 +86,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 		r.OperatorErr = r.OperatorErr + " ;no shortcode;"
 	}
 	if len(r.ServiceCode) > 0 {
-		service, err := inmem_client.GetServiceByCode(r.ServiceCode)
+		service, err := mid_client.GetServiceByCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
 
@@ -103,7 +103,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 			r.PeriodicAllowedFromHours = service.PeriodicAllowedFrom
 			r.PeriodicAllowedToHours = service.PeriodicAllowedTo
 		}
-		campaign, err := inmem_client.GetCampaignByServiceCode(r.ServiceCode)
+		campaign, err := mid_client.GetCampaignByServiceCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
 			logCtx.WithFields(log.Fields{

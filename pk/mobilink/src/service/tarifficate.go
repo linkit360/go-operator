@@ -311,6 +311,7 @@ func (mb *mobilink) mt(r *rec.Record) error {
 			ResponseBody:     strings.TrimSpace(string(mobilinkResponse)),
 			ResponseDecision: responseDecision,
 			ResponseCode:     responseCode,
+			Type:             "charge",
 		}
 		svc.notifyTransactionLog("charge", msg)
 	}()

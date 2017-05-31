@@ -12,7 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
 )
@@ -55,10 +55,10 @@ func (qr *QRTech) sendMT() {
 			"len": len(svc.internals.MTLastAt),
 		}).Debug("loaded internals")
 
-		services, err := inmem_client.GetAllServices()
+		services, err := mid_client.GetAllServices()
 		if err != nil {
 			m.Errors.Inc()
-			err = fmt.Errorf("inmem_client.GetAllServices: %s", err.Error())
+			err = fmt.Errorf("mid_client.GetAllServices: %s", err.Error())
 			log.WithFields(log.Fields{
 				"err": err.Error(),
 			}).Error("cannot get all services")

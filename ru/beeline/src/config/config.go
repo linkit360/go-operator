@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/db"
 )
@@ -23,13 +23,13 @@ type ServerConfig struct {
 	Port string `default:"50306"`
 }
 type AppConfig struct {
-	AppName   string                    `yaml:"app_name"`
-	Server    ServerConfig              `yaml:"server"`
-	Beeline   BeelineConfig             `yaml:"beeline"`
-	DB        db.DataBaseConfig         `yaml:"db"`
-	Consumer  amqp.ConsumerConfig       `yaml:"consumer"`
-	Publisher amqp.NotifierConfig       `yaml:"publisher"`
-	InMem     inmem_client.ClientConfig `yaml:"inmem"`
+	AppName   string                  `yaml:"app_name"`
+	Server    ServerConfig            `yaml:"server"`
+	Beeline   BeelineConfig           `yaml:"beeline"`
+	DB        db.DataBaseConfig       `yaml:"db"`
+	Consumer  amqp.ConsumerConfig     `yaml:"consumer"`
+	Publisher amqp.NotifierConfig     `yaml:"publisher"`
+	Mid       mid_client.ClientConfig `yaml:"mid_client"`
 }
 
 type BeelineConfig struct {

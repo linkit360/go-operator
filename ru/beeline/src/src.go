@@ -31,7 +31,7 @@ func RunServer() {
 	log.WithField("port", appConfig.Server.Port).Info("beeline init")
 	service.InitService(
 		appConfig.Beeline,
-		appConfig.InMem,
+		appConfig.Mid,
 		appConfig.Consumer,
 		appConfig.Publisher,
 	)

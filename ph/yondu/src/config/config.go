@@ -2,14 +2,14 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	"fmt"
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/config"
 	"github.com/linkit360/go-utils/db"
@@ -24,14 +24,15 @@ type ServiceConfig struct {
 type ServerConfig struct {
 	Port string `default:"50306"`
 }
+
 type AppConfig struct {
-	AppName   string                    `yaml:"app_name"`
-	Server    ServerConfig              `yaml:"server"`
-	Yondu     YonduConfig               `yaml:"yondu"`
-	DB        db.DataBaseConfig         `yaml:"db"`
-	Consumer  amqp.ConsumerConfig       `yaml:"consumer"`
-	Publisher amqp.NotifierConfig       `yaml:"publisher"`
-	InMem     inmem_client.ClientConfig `yaml:"inmem_client"`
+	AppName   string                  `yaml:"app_name"`
+	Server    ServerConfig            `yaml:"server"`
+	Yondu     YonduConfig             `yaml:"yondu"`
+	DB        db.DataBaseConfig       `yaml:"db"`
+	Consumer  amqp.ConsumerConfig     `yaml:"consumer"`
+	Publisher amqp.NotifierConfig     `yaml:"publisher"`
+	Mid       mid_client.ClientConfig `yaml:"mid_client"`
 }
 
 type YonduConfig struct {

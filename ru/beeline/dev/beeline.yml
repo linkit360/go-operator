@@ -3,7 +3,7 @@ app_name: beeline
 server:
   port: 50306
 
-inmem_client:
+mid_client:
   dsn: 50307
   timeout: 10
 

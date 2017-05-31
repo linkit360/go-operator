@@ -9,7 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/th/qrtech/src/config"
 	m "github.com/linkit360/go-operator/th/qrtech/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
@@ -70,7 +70,7 @@ func InitService(
 	qrtechConf config.QRTechConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
-	inMemConfig inmem_client.ClientConfig,
+	midConfig mid_client.ClientConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{
@@ -83,8 +83,8 @@ func InitService(
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.API = initQRTech(qrtechConf, consumerConfig)
 
-	if err := inmem_client.Init(inMemConfig); err != nil {
-		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	if err := mid_client.Init(midConfig); err != nil {
+		log.WithField("error", err.Error()).Fatal("cannot init mid client")
 	}
 }
 

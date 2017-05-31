@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
 	"github.com/linkit360/go-utils/amqp"
 	logger "github.com/linkit360/go-utils/log"
@@ -38,14 +38,14 @@ func OnExit() {
 }
 func InitService(
 	beeConf config.BeelineConfig,
-	inMemConfig inmem_client.ClientConfig,
+	midConfig mid_client.ClientConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 
-	if err := inmem_client.Init(inMemConfig); err != nil {
-		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	if err := mid_client.Init(midConfig); err != nil {
+		log.WithField("error", err.Error()).Fatal("cannot init mid client")
 	}
 
 	svc = Service{

@@ -4,7 +4,7 @@ server:
   port: 50306
   threads_count: 1
 
-inmem_client:
+mid_client:
   dsn: :50307
   timeout: 10
 

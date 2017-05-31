@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/ph/yondu/src/config"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
 	"github.com/linkit360/go-utils/amqp"
@@ -22,6 +22,7 @@ type EventNotify struct {
 	EventName string     `json:"event_name,omitempty"`
 	EventData rec.Record `json:"event_data,omitempty"`
 }
+
 type Service struct {
 	YonduAPI          *Yondu
 	SendConsentCh     <-chan amqp_driver.Delivery
@@ -43,7 +44,7 @@ func InitService(
 	yConf config.YonduConfig,
 	consumerConfig amqp.ConsumerConfig,
 	notifierConfig amqp.NotifierConfig,
-	inMemConfig inmem_client.ClientConfig,
+	mid mid_client.ClientConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
 	svc.conf = config.ServiceConfig{
@@ -55,8 +56,8 @@ func InitService(
 	svc.notifier = amqp.NewNotifier(notifierConfig)
 	svc.YonduAPI = initYondu(yConf)
 
-	if err := inmem_client.Init(inMemConfig); err != nil {
-		log.WithField("error", err.Error()).Fatal("cannot init inmem client")
+	if err := mid_client.Init(mid); err != nil {
+		log.WithField("error", err.Error()).Fatal("cannot init mid client")
 	}
 
 	// MT consumer

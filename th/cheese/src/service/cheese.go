@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/th/cheese/src/config"
 	m "github.com/linkit360/go-operator/th/cheese/src/metrics"
 	transaction_log_service "github.com/linkit360/go-qlistener/src/service"
@@ -131,7 +131,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		r.OperatorErr = r.OperatorErr + " no service key"
 	}
 	if len(r.ServiceCode) > 0 {
-		service, err := inmem_client.GetServiceByCode(r.ServiceCode)
+		service, err := mid_client.GetServiceByCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
 
@@ -145,7 +145,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 			r.RetryDays = service.RetryDays
 			r.Periodic = false
 		}
-		campaign, err := inmem_client.GetCampaignByServiceCode(r.ServiceCode)
+		campaign, err := mid_client.GetCampaignByServiceCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()
 			logCtx.WithFields(log.Fields{
