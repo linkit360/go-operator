@@ -191,7 +191,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 		Type:             "mo",
 	}
 
-	if strings.Contains(strings.ToLower(notice), "STOP") {
+	if strings.Contains(strings.ToLower(notice), "stop") {
 		m.MO.Unsibscribe.Inc()
 		if err := svc.publishUnsubscrube(qr.conf.Queue.Unsubscribe, r); err != nil {
 			m.Errors.Inc()

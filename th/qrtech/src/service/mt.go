@@ -47,8 +47,8 @@ func (qr *QRTech) testMt(c *gin.Context) {
 }
 
 func (qr *QRTech) sendMT() {
-	for range time.Tick(time.Minute) {
-		if err := svc.internals.Load(svc.conf.QRTech.InternalsPath); err != nil {
+	for range time.Tick(time.Hour) {
+		if err := svc.internals.Load(svc.conf.QRTech.MtPath); err != nil {
 			// nothing, continue
 		}
 		log.WithFields(log.Fields{
@@ -67,27 +67,37 @@ func (qr *QRTech) sendMT() {
 
 		errorFlag := false
 		for _, serviceIns := range services {
-			log.WithFields(log.Fields{
-				"service": serviceIns.Code,
-			}).Debug("process service..")
-
 			lastAt, ok := svc.internals.MTLastAt[serviceIns.Code]
 			if ok {
-				if time.Since(lastAt.In(svc.API.location)).Hours() < 24 {
+				if time.Since(lastAt.In(svc.API.location)).Hours() > 23 {
 					log.WithFields(log.Fields{
-						"service": serviceIns.Code,
-						"last":    lastAt,
-						"hours":   fmt.Sprintf("%#v", time.Since(lastAt).Hours()),
+						"service":      serviceIns.Code,
+						"last":         lastAt.String(),
+						"hours_passed": int(time.Since(lastAt).Hours()),
+						"now_loc":      time.Now().In(svc.API.location).String(),
+					}).Debug("it's time to call")
+				}
+				if (time.Now().In(svc.API.location)).Hour() == svc.conf.QRTech.MTSendAtHour &&
+					time.Since(lastAt.In(svc.API.location)).Hours() > 5 {
+					// call
+					log.WithFields(log.Fields{
+						"service":      serviceIns.Code,
+						"last":         lastAt.String(),
+						"hours_passed": int(time.Since(lastAt).Hours()),
+						"now_loc":      time.Now().In(svc.API.location).String(),
+					}).Debug("it's time to call")
+				} else {
+					log.WithFields(log.Fields{
+						"service":      serviceIns.Code,
+						"last":         lastAt.String(),
+						"hours_passed": int(time.Since(lastAt).Hours()),
 					}).Debug("skip")
 					continue
 				}
-				log.WithFields(log.Fields{
-					"service": serviceIns.Code,
-				}).Debug("ok with last time")
 			} else {
 				log.WithFields(log.Fields{
 					"service": serviceIns.Code,
-				}).Debug("was not called")
+				}).Debug("no notice in config, call")
 			}
 
 			now := time.Now().In(svc.API.location)
@@ -121,7 +131,7 @@ func (qr *QRTech) sendMT() {
 			log.WithFields(log.Fields{
 				"time": svc.internals.MTLastAt,
 			}).Debug("overall services: save time last sent MT")
-			if err := svc.internals.Save(svc.conf.QRTech.InternalsPath); err != nil {
+			if err := svc.internals.Save(svc.conf.QRTech.MtPath); err != nil {
 				continue
 			}
 			time.Sleep(time.Second)
@@ -147,7 +157,8 @@ func (qr *QRTech) mt(serviceCode, smsText string) (err error) {
 		"params": v.Encode(),
 	}).Debug("call...")
 
-	req, err := http.NewRequest("POST", qr.conf.MT.APIUrl+"?"+v.Encode(), strings.NewReader(v.Encode()))
+	urlReq := qr.conf.MT.APIUrl + "?" + v.Encode()
+	req, err := http.NewRequest("POST", urlReq, strings.NewReader(v.Encode()))
 	if err != nil {
 		err = fmt.Errorf("Cann't create request: %s", err.Error())
 		return
@@ -177,14 +188,11 @@ func (qr *QRTech) mt(serviceCode, smsText string) (err error) {
 	defer resp.Body.Close()
 
 	result := string(qrTechResponse)
-	log.WithFields(log.Fields{
-		"response": result,
-	}).Debug("got response")
-
 	operatorToken := ""
 	if _, err = strconv.Atoi(result); err != nil {
 		log.WithFields(log.Fields{
 			"response": result,
+			"req":      urlReq,
 		}).Error("unknown response")
 		return
 	} else {
@@ -192,11 +200,16 @@ func (qr *QRTech) mt(serviceCode, smsText string) (err error) {
 		operatorToken, negativeAnswer = svc.API.conf.MT.ResultCode[result]
 		if !negativeAnswer {
 			log.WithFields(log.Fields{
-				"token": operatorToken,
+				"token":    operatorToken,
+				"response": result,
+				"req":      urlReq,
 			}).Debug("ok")
 		} else {
 			err = fmt.Errorf("Operator Error Code: %s", operatorToken)
-			log.WithFields(log.Fields{}).Error(operatorToken)
+			log.WithFields(log.Fields{
+				"response": result,
+				"req":      urlReq,
+			}).Error(operatorToken)
 			return
 		}
 	}

@@ -46,8 +46,9 @@ type QRTechConfig struct {
 	MCC                    string               `yaml:"mcc"`
 	CountryCode            int64                `yaml:"country_code"`
 	Location               string               `yaml:"location" default:"Asia/Bangkok"`
-	InternalsPath          string               `yaml:"internals_path" default:"/home/centos/linkit/qrtech_internals.json"`
 	MoToken                string               `yaml:"motoken"`
+	MtPath                 string               `yaml:"mt_path" default:"/home/centos/linkit/mt_path.json"`
+	MTSendAtHour           int                  `yaml:"mt_send_at"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  QRTechQueuesConfig   `yaml:"queues"`
 	DN                     DNConfig             `yaml:"dn"`

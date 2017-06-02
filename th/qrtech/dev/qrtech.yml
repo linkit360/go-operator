@@ -18,7 +18,7 @@ qrtech:
   timeout: 40
   location: Asia/Bangkok
   motoken: qny6qv3sfqhkixjcpe
-  internals_path: /home/centos/linkit/qrtech_internals.json
+  mt_path: /home/centos/linkit/mt_path.json
   transaction_log:
     response: /var/log/linkit/response_qrtech.log
     request: /var/log/linkit/requests_qrtech.log
