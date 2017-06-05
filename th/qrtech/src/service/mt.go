@@ -47,12 +47,13 @@ func (qr *QRTech) testMt(c *gin.Context) {
 }
 
 func (qr *QRTech) sendMT() {
-	for range time.Tick(time.Hour) {
+	for range time.Tick(time.Minute) {
 		if err := svc.internals.Load(svc.conf.QRTech.MtPath); err != nil {
 			// nothing, continue
 		}
 		log.WithFields(log.Fields{
-			"len": len(svc.internals.MTLastAt),
+			"len":          len(svc.internals.MTLastAt),
+			"now_loc_hour": int(time.Now().In(svc.API.location).Hour()),
 		}).Debug("loaded internals")
 
 		services, err := mid_client.GetAllServices()
@@ -61,12 +62,13 @@ func (qr *QRTech) sendMT() {
 			err = fmt.Errorf("mid_client.GetAllServices: %s", err.Error())
 			log.WithFields(log.Fields{
 				"err": err.Error(),
-			}).Error("cannot get all services")
+			}).Fatal("cannot get all services")
 			return
 		}
 
 		errorFlag := false
 		for _, serviceIns := range services {
+
 			lastAt, ok := svc.internals.MTLastAt[serviceIns.Code]
 			if ok {
 				if time.Since(lastAt.In(svc.API.location)).Hours() > 23 {
@@ -77,19 +79,23 @@ func (qr *QRTech) sendMT() {
 						"now_loc":      time.Now().In(svc.API.location).String(),
 					}).Debug("it's time to call")
 				}
-				if (time.Now().In(svc.API.location)).Hour() == svc.conf.QRTech.MTSendAtHour &&
-					time.Since(lastAt.In(svc.API.location)).Hours() > 5 {
+
+				if time.Now().In(svc.API.location).Hour() == svc.conf.QRTech.MTSendAtHour &&
+					time.Since(lastAt.In(svc.API.location)).Hours() > 1 {
 					// call
 					log.WithFields(log.Fields{
 						"service":      serviceIns.Code,
 						"last":         lastAt.String(),
 						"hours_passed": int(time.Since(lastAt).Hours()),
-						"now_loc":      time.Now().In(svc.API.location).String(),
+						"now_loc_hour": time.Now().In(svc.API.location).String(),
 					}).Debug("it's time to call")
 				} else {
 					log.WithFields(log.Fields{
 						"service":      serviceIns.Code,
-						"last":         lastAt.String(),
+						"last_at":      lastAt.String(),
+						"since_hours":  time.Since(lastAt.In(svc.API.location)).Hours(),
+						"send_at_hour": svc.conf.QRTech.MTSendAtHour,
+						"now_loc_hour": time.Now().In(svc.API.location).Hour(),
 						"hours_passed": int(time.Since(lastAt).Hours()),
 					}).Debug("skip")
 					continue
