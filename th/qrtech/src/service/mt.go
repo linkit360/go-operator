@@ -86,8 +86,8 @@ func (qr *QRTech) sendMT() {
 					log.WithFields(log.Fields{
 						"service":      serviceIns.Code,
 						"last":         lastAt.String(),
-						"hours_passed": int(time.Since(lastAt).Hours()),
-						"now_loc_hour": time.Now().In(svc.API.location).String(),
+						"hours_passed": time.Since(lastAt).Hours(),
+						"now_loc":      time.Now().In(svc.API.location).String(),
 					}).Debug("it's time to call")
 				} else {
 					log.WithFields(log.Fields{
@@ -107,29 +107,24 @@ func (qr *QRTech) sendMT() {
 			}
 
 			now := time.Now().In(svc.API.location)
-			interval := 60*now.Hour() + now.Minute()
-			if serviceIns.PeriodicAllowedFrom < interval && serviceIns.PeriodicAllowedTo >= interval {
-				err := qr.mt(serviceIns.Code, serviceIns.SMSOnContent)
-				if err != nil {
-					m.MTErrors.Set(1)
-					errorFlag = true
-				} else {
-					log.WithFields(log.Fields{
-						"service": serviceIns.Code,
-					}).Debug("set now")
-					if svc.internals.MTLastAt == nil {
-						svc.internals.MTLastAt = make(map[string]time.Time)
-					}
-					svc.internals.MTLastAt[serviceIns.Code] = now
-				}
+			err := qr.mt(serviceIns.Code, serviceIns.SMSOnContent)
+			if err != nil {
+				m.MTErrors.Set(1)
+				log.WithFields(log.Fields{
+					"service": serviceIns.Code,
+					"error":   err.Error(),
+				}).Error("call error")
+				errorFlag = true
 			} else {
 				log.WithFields(log.Fields{
-					"service":  serviceIns.Code,
-					"interval": interval,
-					"from":     serviceIns.PeriodicAllowedFrom,
-					"to":       serviceIns.PeriodicAllowedTo,
-				}).Debug("not in periodic send interval")
+					"service": serviceIns.Code,
+				}).Debug("call ok, set last call time to now")
+				if svc.internals.MTLastAt == nil {
+					svc.internals.MTLastAt = make(map[string]time.Time)
+				}
+				svc.internals.MTLastAt[serviceIns.Code] = now
 			}
+
 		}
 
 		if !errorFlag {

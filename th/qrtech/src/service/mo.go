@@ -211,6 +211,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 		svc.publishTransactionLog(tl)
 		return
 	}
+
 	svc.publishTransactionLog(tl)
 
 	if err := svc.publishMO(qr.conf.Queue.MO, r); err != nil {
