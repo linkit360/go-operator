@@ -223,7 +223,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		Type:             "mo",
 	}
 
-	if strings.Contains(acs, "UNREG") || strings.Contains(acs, "unreg") {
+	if strings.Contains(strings.ToLower(acs), "unreg") {
 		m.Unsibscribe.Inc()
 		if err := svc.publishUnsubscrube(r); err != nil {
 			m.Errors.Inc()

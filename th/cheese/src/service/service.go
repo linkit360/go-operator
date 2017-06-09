@@ -65,6 +65,7 @@ func logRequests(requestType string, t rec.Record, req *http.Request, err string
 	}
 	svc.CheeseAPI.requestLog.WithFields(fields).Println(requestType)
 }
+
 func (svc *Service) publishMO(queue string, data interface{}) error {
 	event := amqp.EventNotify{
 		EventName: queue,

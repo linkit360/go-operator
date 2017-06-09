@@ -116,6 +116,7 @@ func (qr *QRTech) sendMT() {
 				}).Error("call error")
 				errorFlag = true
 			} else {
+				m.MTLastCall.Set(0)
 				log.WithFields(log.Fields{
 					"service": serviceIns.Code,
 				}).Debug("call ok, set last call time to now")
@@ -124,7 +125,6 @@ func (qr *QRTech) sendMT() {
 				}
 				svc.internals.MTLastAt[serviceIns.Code] = now
 			}
-
 		}
 
 		if !errorFlag {

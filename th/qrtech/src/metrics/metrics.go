@@ -14,6 +14,7 @@ var (
 	PageNotFound m.Gauge
 	NotifyErrors m.Gauge
 	MTErrors     prometheus.Gauge
+	MTLastCall   prometheus.Gauge
 	MO           *MOMetrics
 	DN           *DNMetrics
 )
@@ -59,6 +60,7 @@ func Init(appName string) {
 	PageNotFound = m.NewGauge("", appName, "404_page_not_found", "404 page not found")
 	NotifyErrors = m.NewGauge("", appName, "notify_errors", "notify errors")
 	MTErrors = m.PrometheusGauge("", appName, "mt_errors", "mt errors")
+	MTLastCall = m.PrometheusGauge(appName, "mt", "last_call", "mt last call seconds")
 
 	MO = &MOMetrics{
 		AisSuccess:      m.NewGauge(appName, "mo", "ais_success", "ais req success"),
@@ -95,6 +97,7 @@ func Init(appName string) {
 	}
 	go func() {
 		for range time.Tick(time.Minute) {
+			MTLastCall.Add(60)
 			Success.Update()
 			Errors.Update()
 			PageNotFound.Update()

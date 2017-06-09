@@ -4,7 +4,7 @@ server:
   port: 50306
 
 mid_client:
-  dsn: 50307
+  dsn: :50307
   timeout: 10
 
 beeline:
