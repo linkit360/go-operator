@@ -8,10 +8,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
 	m "github.com/linkit360/go-operator/ru/beeline/src/metrics"

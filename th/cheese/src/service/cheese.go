@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
 	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/th/cheese/src/config"

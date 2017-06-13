@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
+	log "github.com/sirupsen/logrus"
 
 	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"

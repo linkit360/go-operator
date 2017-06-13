@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/linkit360/go-operator/ph/yondu/src/config"
 	m "github.com/linkit360/go-operator/ph/yondu/src/metrics"

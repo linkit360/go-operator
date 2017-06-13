@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	amqp_driver "github.com/streadway/amqp"
 
 	"github.com/gin-gonic/gin"

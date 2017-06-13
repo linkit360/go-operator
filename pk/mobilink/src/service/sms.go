@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 
 	m "github.com/linkit360/go-operator/pk/mobilink/src/metrics"

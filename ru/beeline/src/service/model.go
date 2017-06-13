@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	smpp_client "github.com/fiorix/go-smpp/smpp"
+	log "github.com/sirupsen/logrus"
 
 	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-operator/ru/beeline/src/config"
