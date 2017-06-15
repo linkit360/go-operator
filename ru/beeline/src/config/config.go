@@ -34,7 +34,6 @@ type AppConfig struct {
 
 type BeelineConfig struct {
 	Name                   string               `yaml:"name"`
-	ShortNUmber            string               `yaml:"short_number"`
 	TransactionLogFilePath TransactionLogConfig `yaml:"transaction_log"`
 	Queue                  BeelineQueuesConfig  `yaml:"queues"`
 	SMPP                   SmppConfig           `yaml:"smpp"`

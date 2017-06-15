@@ -78,27 +78,27 @@ func (qr *QRTech) sendMT() {
 						"hours_passed": int(time.Since(lastAt).Hours()),
 						"now_loc":      time.Now().In(svc.API.location).String(),
 					}).Debug("it's time to call")
-				}
-
-				if time.Now().In(svc.API.location).Hour() == svc.conf.QRTech.MTSendAtHour &&
-					time.Since(lastAt.In(svc.API.location)).Hours() > 1 {
-					// call
-					log.WithFields(log.Fields{
-						"service":      serviceIns.Code,
-						"last":         lastAt.String(),
-						"hours_passed": time.Since(lastAt).Hours(),
-						"now_loc":      time.Now().In(svc.API.location).String(),
-					}).Debug("it's time to call")
 				} else {
-					log.WithFields(log.Fields{
-						"service":      serviceIns.Code,
-						"last_at":      lastAt.String(),
-						"since_hours":  time.Since(lastAt.In(svc.API.location)).Hours(),
-						"send_at_hour": svc.conf.QRTech.MTSendAtHour,
-						"now_loc_hour": time.Now().In(svc.API.location).Hour(),
-						"hours_passed": int(time.Since(lastAt).Hours()),
-					}).Debug("skip")
-					continue
+					if time.Now().In(svc.API.location).Hour() == svc.conf.QRTech.MTSendAtHour &&
+						time.Since(lastAt.In(svc.API.location)).Hours() > 1 {
+						// call
+						log.WithFields(log.Fields{
+							"service":      serviceIns.Code,
+							"last":         lastAt.String(),
+							"hours_passed": time.Since(lastAt).Hours(),
+							"now_loc":      time.Now().In(svc.API.location).String(),
+						}).Debug("it's time to call")
+					} else {
+						log.WithFields(log.Fields{
+							"service":      serviceIns.Code,
+							"last_at":      lastAt.String(),
+							"since_hours":  time.Since(lastAt.In(svc.API.location)).Hours(),
+							"send_at_hour": svc.conf.QRTech.MTSendAtHour,
+							"now_loc_hour": time.Now().In(svc.API.location).Hour(),
+							"hours_passed": int(time.Since(lastAt).Hours()),
+						}).Debug("skip")
+						continue
+					}
 				}
 			} else {
 				log.WithFields(log.Fields{
