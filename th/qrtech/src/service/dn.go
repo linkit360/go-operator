@@ -24,6 +24,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 	var err error
 	r := rec.Record{
 		CountryCode: qr.conf.CountryCode,
+		SentAt:      time.Now().UTC(),
 	}
 
 	var ok bool
@@ -88,7 +89,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get service by code")
 		} else {
-			r.Price = int(service.Price)
+			r.Price = service.PriceCents
 			r.DelayHours = service.DelayHours
 			r.PaidHours = service.PaidHours
 			r.RetryDays = service.RetryDays
@@ -169,24 +170,6 @@ func (qr *QRTech) dn(c *gin.Context) {
 		}
 	}
 
-	bcdate, ok := c.GetPostForm("bcdate")
-	if !ok {
-		logCtx.WithFields(log.Fields{}).Warn("cann't find bcdate")
-	}
-	operatorTime := time.Now()
-	if bcdate != "" {
-		operatorTime, err = time.Parse("20060102", bcdate)
-		if err != nil {
-
-			err = fmt.Errorf("time.Parse: %s", err.Error())
-			logCtx.WithFields(log.Fields{
-				"error": err.Error(),
-			}).Warn("cann't parse time")
-			err = nil
-			// not critical
-		}
-	}
-
 	keyWord, ok := c.GetPostForm("keyword")
 	if !ok {
 		m.DN.AbsentParameter.Inc()
@@ -200,7 +183,6 @@ func (qr *QRTech) dn(c *gin.Context) {
 		"msisdn":       r.Msisdn,
 		"shortCode":    r.ServiceCode,
 		"operatorCode": operatorCode,
-		"bcdate":       bcdate,
 		"dnerrorcode":  dnerrorcode,
 		"keyword":      keyWord,
 	}
@@ -212,7 +194,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		Tid:              r.Tid,
 		Msisdn:           r.Msisdn,
 		OperatorToken:    r.OperatorToken,
-		OperatorTime:     operatorTime,
+		OperatorTime:     time.Now().UTC(),
 		OperatorCode:     r.OperatorCode,
 		CountryCode:      r.CountryCode,
 		Error:            r.OperatorErr,

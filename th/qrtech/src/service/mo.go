@@ -94,7 +94,7 @@ func (qr *QRTech) mo(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get service by id")
 		} else {
-			r.Price = int(service.Price)
+			r.Price = service.PriceCents
 			r.DelayHours = service.DelayHours
 			r.PaidHours = service.PaidHours
 			r.RetryDays = service.RetryDays

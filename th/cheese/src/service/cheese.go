@@ -139,12 +139,13 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get service by id")
 		} else {
-			r.Price = 100 * int(service.Price)
+			r.Price = service.PriceCents
 			r.DelayHours = service.DelayHours
 			r.PaidHours = service.PaidHours
 			r.RetryDays = service.RetryDays
 			r.Periodic = false
 		}
+
 		campaign, err := mid_client.GetCampaignByServiceCode(r.ServiceCode)
 		if err != nil {
 			m.Errors.Inc()

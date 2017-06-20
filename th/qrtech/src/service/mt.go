@@ -52,6 +52,7 @@ func (qr *QRTech) sendMT() {
 			// nothing, continue
 		}
 		log.WithFields(log.Fields{
+			"from":         svc.conf.QRTech.MtPath,
 			"len":          len(svc.internals.MTLastAt),
 			"now_loc_hour": int(time.Now().In(svc.API.location).Hour()),
 		}).Debug("loaded internals")
