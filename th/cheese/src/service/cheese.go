@@ -153,7 +153,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service id")
 		} else {
-			r.CampaignCode = campaign.Code
+			r.CampaignId = campaign.Id
 		}
 	} else {
 		m.Errors.Inc()
@@ -214,7 +214,7 @@ func (cheese *Cheese) mo(operator string, c *gin.Context) {
 		Error:            r.OperatorErr,
 		Price:            r.Price,
 		ServiceCode:      r.ServiceCode,
-		CampaignCode:     r.CampaignCode,
+		CampaignCode:     r.CampaignId,
 		RequestBody:      c.Request.URL.Path + "/" + c.Request.URL.RawQuery,
 		ResponseBody:     "",
 		ResponseDecision: "",

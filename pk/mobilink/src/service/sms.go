@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -58,6 +59,13 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 			}
 
 			t := e.EventData
+			if _, err := strconv.Atoi(t.Msisdn); err != nil {
+				log.WithFields(log.Fields{
+					"msg":         "dropped",
+					"sms_request": string(msg.Body),
+				}).Info("msisdn is wrong")
+				goto ack
+			}
 			tl, smsErr := svc.api.SendSMS(t.Tid, t.Msisdn, t.SMSText)
 			if smsErr != nil {
 				t.OperatorErr = smsErr.Error()
@@ -72,7 +80,7 @@ func processSMS(deliveries <-chan amqp.Delivery) {
 				Price:            t.Price,
 				ServiceCode:      t.ServiceCode,
 				SubscriptionId:   t.SubscriptionId,
-				CampaignCode:     t.CampaignCode,
+				CampaignCode:     t.CampaignId,
 				RequestBody:      tl.RequestBody,
 				ResponseBody:     tl.ResponseBody,
 				ResponseDecision: tl.ResponseDecision,

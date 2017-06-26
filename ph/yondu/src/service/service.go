@@ -142,7 +142,7 @@ func (svc *Service) publishTransactionLog(eventName string, yr YonduResponseExte
 		Price:            t.Price,
 		ServiceCode:      t.ServiceCode,
 		SubscriptionId:   t.SubscriptionId,
-		CampaignCode:     t.CampaignCode,
+		CampaignCode:     t.CampaignId,
 		RequestBody:      yr.RequestUrl,
 		ResponseBody:     fmt.Sprintf("%v", yr.ResponseRawBody),
 		ResponseDecision: yr.ResponseMessage,

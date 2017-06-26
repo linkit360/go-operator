@@ -105,7 +105,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 				"serviceKey": r.ServiceCode,
 			}).Error("cannot get campaign by service code")
 		} else {
-			r.CampaignCode = campaign.Code
+			r.CampaignId = campaign.Id
 		}
 
 	} else {
@@ -200,7 +200,7 @@ func (qr *QRTech) dn(c *gin.Context) {
 		Error:            r.OperatorErr,
 		Price:            r.Price,
 		ServiceCode:      r.ServiceCode,
-		CampaignCode:     r.CampaignCode,
+		CampaignCode:     r.CampaignId,
 		RequestBody:      c.Request.URL.Path + "/" + string(fieldsBody),
 		ResponseBody:     "",
 		ResponseDecision: "",

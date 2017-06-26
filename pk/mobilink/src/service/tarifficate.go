@@ -306,7 +306,7 @@ func (mb *mobilink) mt(r *rec.Record) error {
 			Price:            r.Price,
 			ServiceCode:      r.ServiceCode,
 			SubscriptionId:   r.SubscriptionId,
-			CampaignCode:     r.CampaignCode,
+			CampaignCode:     r.CampaignId,
 			RequestBody:      strings.TrimSpace(requestBody),
 			ResponseBody:     strings.TrimSpace(string(mobilinkResponse)),
 			ResponseDecision: responseDecision,
