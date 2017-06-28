@@ -37,9 +37,8 @@ func RunServer() {
 
 	e.NoRoute(notFound)
 
-	e.Run(":" + appConfig.Server.Port)
-
-	log.WithField("port", appConfig.Server.Port).Info("qrTech init")
+	r.Run(appConfig.Server.Host + ":" + appConfig.Server.Port)
+	log.WithField("dsn", appConfig.Server.Host+":"+appConfig.Server.Port).Info("mt init")
 }
 
 func notFound(c *gin.Context) {

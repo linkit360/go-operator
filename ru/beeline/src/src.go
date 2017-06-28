@@ -26,9 +26,9 @@ func RunServer() {
 
 	r.NoRoute(notFound)
 
-	r.Run(":" + appConfig.Server.Port)
+	r.Run(appConfig.Server.Host + ":" + appConfig.Server.Port)
+	log.WithField("dsn", appConfig.Server.Host+":"+appConfig.Server.Port).Info("mt init")
 
-	log.WithField("port", appConfig.Server.Port).Info("beeline init")
 	service.InitService(
 		appConfig.Beeline,
 		appConfig.Mid,

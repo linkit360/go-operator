@@ -36,9 +36,8 @@ func RunServer() {
 
 	r.NoRoute(notFound)
 
-	r.Run(":" + appConfig.Server.Port)
-
-	log.WithField("port", appConfig.Server.Port).Info("cheese init")
+	r.Run(appConfig.Server.Host + ":" + appConfig.Server.Port)
+	log.WithField("dsn", appConfig.Server.Host+":"+appConfig.Server.Port).Info("mt init")
 }
 
 func notFound(c *gin.Context) {

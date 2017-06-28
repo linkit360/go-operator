@@ -13,9 +13,9 @@ import (
 )
 
 type ServerConfig struct {
+	Host         string `default:"127.0.0.1" yaml:"host"`
 	Port         string `default:"50304"`
 	OperatorName string `yaml:"operator_name"`
-	ThreadsCount int    `default:"1" yaml:"threads_count"`
 }
 
 type QueueConfig struct {

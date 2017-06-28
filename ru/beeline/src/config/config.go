@@ -20,7 +20,8 @@ type ServiceConfig struct {
 	Notifier amqp.NotifierConfig
 }
 type ServerConfig struct {
-	Port string `default:"50306"`
+	Host string `default:"127.0.0.1" yaml:"host"`
+	Port string `default:"50306" yaml:"port"`
 }
 type AppConfig struct {
 	AppName   string                  `yaml:"app_name"`

@@ -20,7 +20,6 @@ func AddMOHandler(r *gin.Engine) {
 	r.Group("/api").Group("/mo").POST("", svc.API.mo)
 }
 
-//
 // POST http://www.CPurl.com/receiver.php HTTP/1.1
 // HOST: CPHost
 // msgid=_msgid123&msisdn=66819197088&message=P1&shortcode=4219112&motoken =
