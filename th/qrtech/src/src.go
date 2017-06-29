@@ -37,7 +37,7 @@ func RunServer() {
 
 	e.NoRoute(notFound)
 
-	r.Run(appConfig.Server.Host + ":" + appConfig.Server.Port)
+	e.Run(appConfig.Server.Host + ":" + appConfig.Server.Port)
 	log.WithField("dsn", appConfig.Server.Host+":"+appConfig.Server.Port).Info("mt init")
 }
 

@@ -36,7 +36,6 @@ consumer:
 
 publisher:
   chan_capacity: 100
-  pending_buffer_path: /home/centos/linkit/cheese_pending.json
   conn:
     user: linkit
     pass: dg-U_oHhy7-
